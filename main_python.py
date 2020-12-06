@@ -16,7 +16,7 @@ soap = data['soap_note'].dropna()
 temp_sentences = [i.split('o:')[0].strip().strip('s:').lower() for i in soap]
 sentences = [re.split(r'[-\s.,;!?]+', i) for i in temp_sentences]
 
-ts = sentences[0].split()
+ts = sentences[0]
 vocab = sorted(set(ts))
 one_hot = np.zeros((len(ts), len(vocab)), int)
 for i, word in enumerate(ts):
