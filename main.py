@@ -3,6 +3,7 @@ import re
 from nltk.corpus import stopwords
 from nltk.stem import SnowballStemmer
 from nltk.stem.porter import PorterStemmer
+from collections import Counter
 from nltk.util import ngrams
 import nltk
 import numpy as np
@@ -82,6 +83,37 @@ document = document.split('\n ')
 if stemmer:
     for i, sentence in enumerate(document):
         document[i] = ' '.join([stemmer.stem(w) for w in sentence.split() if w not in stopword_set])
+
+#%%
+from collections import Counter
+sentences = [re.split(r'[-\s.,;!?]+', i)[:-1] for i in document]
+
+
+#corpus = {}
+#for i, sentence in enumerate(sentences):
+#    corpus['sent' + str(i)] = Counter(sentence)
+#df = pd.DataFrame.from_records(corpus).fillna(0).astype(int).T
+
+
+#%%
+doc_tokens = []
+for sent in sentences:
+    doc_tokens += [sorted(sent)]
+lexicon = sorted(set(sum(doc_tokens, [])))
+
+from collections import OrderedDict
+zero_vector = OrderedDict((token, 0) for token in lexicon)
+
+import copy
+doc_vectors = []
+for doc in sentences:
+    vec = copy.copy(zero_vector)
+    tokens = doc
+    token_counts = Counter(tokens)
+    for key, value in token_counts.items():
+        vec[key] = value / len(lexicon)
+    doc_vectors.append(vec)
+
 #%%
 #sentences = [re.split(r'[-\s.,;!?]+', i) for i in temp_sentences]
 #for i, token in enumerate(sentences):
