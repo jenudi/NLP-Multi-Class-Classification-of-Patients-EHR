@@ -3,7 +3,9 @@ import re
 from nltk.corpus import stopwords
 from nltk.stem import SnowballStemmer
 from nltk.stem.porter import PorterStemmer
+from collections import OrderedDict
 from collections import Counter
+import copy
 from nltk.util import ngrams
 import nltk
 import numpy as np
@@ -85,9 +87,8 @@ if stemmer:
         document[i] = ' '.join([stemmer.stem(w) for w in sentence.split() if w not in stopword_set])
 
 #%%
-from collections import Counter
-sentences = [re.split(r'[-\s.,;!?]+', i)[:-1] for i in document]
 
+sentences = [re.split(r'[-\s.,;!?]+', i)[:-1] for i in document]
 
 #corpus = {}
 #for i, sentence in enumerate(sentences):
@@ -101,18 +102,43 @@ for sent in sentences:
     doc_tokens += [sorted(sent)]
 lexicon = sorted(set(sum(doc_tokens, [])))
 
-from collections import OrderedDict
 zero_vector = OrderedDict((token, 0) for token in lexicon)
+document_tfidf_vectors = []
 
-import copy
-doc_vectors = []
-for doc in sentences:
+for sent in sentences:
     vec = copy.copy(zero_vector)
-    tokens = doc
+    tokens = sent
     token_counts = Counter(tokens)
     for key, value in token_counts.items():
-        vec[key] = value / len(lexicon)
-    doc_vectors.append(vec)
+        sents_containing_key = 0
+        for _sent in sentences:
+            if key in  _sent:
+                sents_containing_key += 1
+        tf = value / len(lexicon)
+        if sents_containing_key:
+            #idf = len(sentences) / sents_containing_key
+            idf = (1+np.log((1+len(sentences)) / (1+sents_containing_key)))
+        else:
+            idf = 0
+        vec[key] = tf * idf
+    document_tfidf_vectors.append(vec)
+
+corpus = {}
+for i, n in enumerate(document_tfidf_vectors):
+    corpus['sent' + str(i)] = n
+df = pd.DataFrame.from_records(corpus).T
+
+#%%
+from sklearn.feature_extraction.text import TfidfVectorizer
+
+corpus = {}
+for i, sentence in enumerate(sentences):
+    corpus['sent' + str(i)] = ' '.join(sentence)
+
+tfidf = TfidfVectorizer(min_df=0.0,smooth_idf=True)
+tfs = tfidf.fit_transform(corpus.values())
+
+
 
 #%%
 #sentences = [re.split(r'[-\s.,;!?]+', i) for i in temp_sentences]
@@ -130,3 +156,4 @@ for doc in sentences:
 
 # Two
 #tokens_two = list(ngrams(i, 2) for i in sentences)
+
