@@ -53,6 +53,7 @@ document = document.replace(r"!", " ! ")
 document = document.replace(r"pt", " pt ")
 document = document.replace(r"(", "")
 document = document.replace(r")", "")
+document = document.replace(r"=", "")
 #document = document.replace(r"/", " ")
 document = document.replace(r"^", " ^ ")
 document = document.replace(r"+", " + ")
@@ -152,8 +153,6 @@ for i, sentence in enumerate(sentences):
 
 tfidf = TfidfVectorizer(min_df=0.0,smooth_idf=True)
 tfs = tfidf.fit_transform(corpus.values())
-
-
 
 #%%
 #sentences = [re.split(r'[-\s.,;!?]+', i) for i in temp_sentences]
