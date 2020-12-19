@@ -26,9 +26,7 @@ encounter_dx = pd.read_csv("encounter_dx.csv").rename(str.lower, axis='columns')
 lab_results = pd.read_csv("lab_results.csv").rename(str.lower, axis='columns')
 
 data1=encounter_data[['encounter_id','member_id', 'patient_gender', 'has_appt', 'soap_note']].set_index('encounter_id').sort_index()
-
 data2=encounter_dx.groupby('encounter_id')['code', 'description', 'severity'].apply(lambda x: list(x.values)).sort_index()
-
 data3=lab_results.groupby('encounter_id')['result_name','result_description','numeric_result', 'units'].apply(lambda x: list(x.values)).sort_index()
 
 data=pd.concat([data1,data2,data3],axis=1)
@@ -52,7 +50,10 @@ document = document.replace(r"\'ll", " will")
 document = document.replace(r",", " ")
 document = document.replace(r".", " . ")
 document = document.replace(r"!", " ! ")
-document = document.replace(r"/", " ")
+document = document.replace(r"pt", " pt ")
+document = document.replace(r"(", "")
+document = document.replace(r")", "")
+#document = document.replace(r"/", " ")
 document = document.replace(r"^", " ^ ")
 document = document.replace(r"+", " + ")
 document = document.replace(r"-", " - ")
@@ -72,7 +73,7 @@ document = document.replace(r"shoulda", "should have")
 document = document.replace(r"coulda", "could have")
 document = document.replace(r"woulda", "would have")
 document = document.replace(r"http", "")
-document = document.replace(r"c/o", "complaint of")
+document = document.replace(r"c/o", "complains of")
 document = document.replace(r"h/o", "history of")
 document = document.replace(r"yrs", "years")
 document = document.replace(r"pmh", "past medical history")
@@ -92,8 +93,10 @@ document = document.replace(r" lt ", " left ")
 document = document.replace(r" pt ", " patient ")
 document = document.replace(r" yo ", " years old ")
 document = document.replace(r" yr ", " years old ")
+document = document.replace(r" x ", " times ")
 
 document = document.split('\n ')
+
 if stemmer:
     for i, sentence in enumerate(document):
         document[i] = ' '.join([stemmer.stem(w) for w in sentence.split() if w not in stopword_set])
