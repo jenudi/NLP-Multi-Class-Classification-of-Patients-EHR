@@ -18,10 +18,22 @@ except LookupError:
 
 stemmer = PorterStemmer()
 #stemmer = SnowballStemmer('english')
-#%%
 stopword_set = set(stopwords.words("english"))
 
-data = pd.read_csv("encounter.csv").rename(str.lower, axis='columns')
+
+encounter_data = pd.read_csv("encounter.csv").rename(str.lower, axis='columns')
+encounter_dx = pd.read_csv("encounter_dx.csv").rename(str.lower, axis='columns')
+lab_results = pd.read_csv("lab_results.csv").rename(str.lower, axis='columns')
+
+data1=encounter_data[['encounter_id','member_id', 'patient_gender', 'has_appt', 'soap_note']].set_index('encounter_id').sort_index()
+
+data2=encounter_dx.groupby('encounter_id')['code', 'description', 'severity'].apply(lambda x: list(x.values)).sort_index()
+
+data3=lab_results.groupby('encounter_id')['result_name','result_description','numeric_result', 'units'].apply(lambda x: list(x.values)).sort_index()
+
+data=pd.concat([data1,data2,data3],axis=1)
+data=data.rename(columns={0:'code_description_severity', 1:'result_name_result-description_numeric-result_units'})
+
 soap = data['soap_note'].dropna().reset_index(drop=True)
 soap_temp = [re.split('o:''|''o :', i) for i in soap] # split by "o:" or "o :"
 temp_sentences = [i[0].strip().strip('s:').lower() for i in soap_temp]
