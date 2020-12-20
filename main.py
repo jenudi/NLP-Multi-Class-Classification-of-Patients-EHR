@@ -1,18 +1,20 @@
 #%% Imports
 
 import pandas as pd
+import numpy as np
 import re
 from nltk.corpus import stopwords
 from nltk.stem.porter import PorterStemmer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from collections import OrderedDict
+import matplotlib.pyplot as plt
+from gensim.models.word2vec import Word2Vec
 
 from nltk.stem import SnowballStemmer
 from collections import Counter
 import copy
 from nltk.util import ngrams
 import nltk
-import numpy as np
 
 #%% Loading Data
 
@@ -108,38 +110,52 @@ if stemmer:
     for i, sentence in enumerate(document):
         document[i] = ' '.join([stemmer.stem(w) for w in sentence.split() if w not in stopword_set])
 
-sentences = [re.split(r'[-\s.,;!?]+', i)[:-1] for i in document]
-
+tokens = [re.split(r'[-\s.,;!?]+', i)[:-1] for i in document]
+sentences = [' '.join(i) for i in tokens]
 #corpus = {}
-#for i, sentence in enumerate(sentences):
+#for i, sentence in enumerate(tokens):
 #    corpus['sent' + str(i)] = Counter(sentence)
 #df = pd.DataFrame.from_records(corpus).fillna(0).astype(int).T
 
 #%% TF-IDF
 
 doc_tokens = []
-for sent in sentences:
-    doc_tokens += [sorted(sent)]
+for tok in tokens:
+    doc_tokens += [sorted(tok)]
 lexicon = sorted(set(sum(doc_tokens, [])))
 zero_vector = OrderedDict((token, 0) for token in lexicon)
 
-corpus = {}
-for i, sentence in enumerate(sentences):
-    corpus['sent' + str(i)] = ' '.join(sentence)
-
 tfidf = TfidfVectorizer(min_df=0.0,smooth_idf=True)
-tfs = tfidf.fit_transform(corpus.values())
+tfs_dataframe = pd.DataFrame(tfidf.fit_transform(sentences).todense())
+U, s, Vt = np.linalg.svd(tfs_dataframe.T)
+S = np.zeros((len(U), len(Vt)))
+pd.np.fill_diagonal(S, s)
+#pd.DataFrame(S).round(1)
 
-#%%
+#%% err
 
-docs = ["The faster Harry got to the store, the faster and faster Harry would get home."]
-docs.append("Harry is hairy and faster than Jill.")
-docs.append("Jill is not as hairy as Harry.")
+err = []
+for numdim in range(len(s), 0, -1):
+    S[numdim - 1, numdim - 1] = 0
+    tfs_dataframe_reconstructed = U.dot(S).dot(Vt)
+    err.append(np.sqrt(((tfs_dataframe_reconstructed - tfs_dataframe.T).values.flatten() ** 2).sum() / np.product(tfs_dataframe.T.shape)))
+np.array(err).round(2)
 
-l = []
-for i in sentences:
-    l.append(' '.join(i))
-tfs2 = tfidf.fit_transform(l)
+
+ts = ts.cumsum()
+ts.plot()
+plt.show()
+
+#%% Word2Vec
+
+num_features = 300
+min_word_count = 0
+num_workers = 2
+window_size = 5
+subsampling = 1e-3
+
+model = Word2Vec(sentences, min_count=0,size= 441,workers=2, window =5, sg = 0, sample= 1e-3)
+
 
 #%% TF-IDF Manual
 """
