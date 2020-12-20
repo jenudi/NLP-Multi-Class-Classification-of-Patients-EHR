@@ -34,7 +34,7 @@ soap_temp = [re.split('o:''|''o :', i) for i in soap] # split by "o:" or "o :"
 temp_sentences = [i[0].strip().strip('s:').lower() for i in soap_temp]
 
 
-#%% Preprocessing
+#%% Pre-processing
 
 try:
     _ = stopwords.words("english")
