@@ -36,6 +36,105 @@ temp_sentences = [i[0].strip().strip('s:').lower() for i in soap_temp]
 
 #%% Pre-processing
 
+class document:
+
+    def __init__(self,text):
+        self.text=text
+        self.sentences=[]
+        self.lexicon=[]
+
+    def do_replaces(self):
+        self.text = self.text.replace(r"'s", "  is")
+        self.text = self.text.replace(r"'ve", " have")
+        self.text = self.text.replace(r"can't", "cannot")
+        self.text = self.text.replace(r"musn't", "must not")
+        self.text = self.text.replace(r"n't", " not")
+        self.text = self.text.replace(r"i'm", "i am")
+        self.text = self.text.replace(r"'re", " are")
+        self.text = self.text.replace(r"'d", " would")
+        self.text = self.text.replace(r"\'ll", " will")
+        self.text = self.text.replace(r",", " ")
+        self.text = self.text.replace(r".", " . ")
+        self.text = self.text.replace(r"!", " ! ")
+        self.text = self.text.replace(r"pt", " pt ")
+        self.text = self.text.replace(r"(", "")
+        self.text = self.text.replace(r")", "")
+        self.text = self.text.replace(r"=", "")
+        self.text = self.text.replace(r"^", " ^ ")
+        self.text = self.text.replace(r"+", " + ")
+        self.text = self.text.replace(r"-", " - ")
+        self.text = self.text.replace(r"=", " = ")
+        self.text = self.text.replace(r"'", " ")
+        self.text = self.text.replace(r":", " : ")
+        self.text = self.text.replace(r" e g ", " eg ")
+        self.text = self.text.replace(r" b g ", " bg ")
+        self.text = self.text.replace(r" u s ", " united states ")
+        self.text = self.text.replace(r" 9 11 ", "911")
+        self.text = self.text.replace(r"e - mail", "email")
+        self.text = self.text.replace(r"e-mail", "email")
+        self.text = self.text.replace(r" e mail", "email")
+        self.text = self.text.replace(r"email", "email")
+        self.text = self.text.replace(r"j k", "jk")
+        self.text = self.text.replace(r"shoulda", "should have")
+        self.text = self.text.replace(r"coulda", "could have")
+        self.text = self.text.replace(r"woulda", "would have")
+        self.text = self.text.replace(r"http", "")
+        self.text = self.text.replace(r"c/o", "complains of")
+        self.text = self.text.replace(r"h/o", "history of")
+        self.text = self.text.replace(r"yrs", "years")
+        self.text = self.text.replace(r"pmh", "past medical history")
+        self.text = self.text.replace(r"psh", "past surgical history")
+        self.text = self.text.replace(r"b/l", "bilateral")
+        self.text = self.text.replace(r"nkda", "no known drug allergies")
+        self.text = self.text.replace(r"crf", "chronic renal failure")
+        self.text = self.text.replace(r"arf", "acute renal failure")
+        self.text = self.text.replace(r"w/", "with")
+        self.text = self.text.replace(r" m ", " male ")
+        self.text = self.text.replace(r" f ", " female ")
+        self.text = self.text.replace(r" ys ", " years ")
+        self.text = self.text.replace(r" r ", " right ")
+        self.text = self.text.replace(r" rt ", " right ")
+        self.text = self.text.replace(r" l ", " left ")
+        self.text = self.text.replace(r" lt ", " left ")
+        self.text = self.text.replace(r" pt ", " patient ")
+        self.text = self.text.replace(r" yo ", " years old ")
+        self.text = self.text.replace(r" yr ", " years old ")
+        self.text = self.text.replace(r" x ", " times ")
+
+    def make_sentences(self,char):
+        self.sentences = [sentence(sent) for sent in self.text.split(char)]
+
+    def get_sentences(self):
+        return [sent.text for sent in self.sentences]
+
+    def make_lexicon(self):
+        doc_tokens=[]
+        for sent in self.sentences:
+            doc_tokens += [sorted(sent.get_one_gram_tokens())]
+        self.lexicon = sorted(set(sum(doc_tokens, [])))
+
+
+class sentence:
+
+    def __init__(self,text):
+        self.text=text
+        self.one_gram_tokens=[]
+
+    def stem_and_check_stop(self,stopword_set):
+        self.text = ' '.join([stemmer.stem(w) for w in self.text.split() if w not in stopword_set])
+
+    def make_one_gram_tokens(self):
+        self.one_gram_tokens = [token(tok) for tok in re.split(r'[-\s.,;!?]+', self.text)[:-1]]
+
+    def get_one_gram_tokens(self):
+        return [tok.text for tok in self.one_gram_tokens]
+
+
+class token:
+    def __init__(self,text):
+        self.text=text
+
+
 try:
     _ = stopwords.words("english")
 except LookupError:
@@ -46,94 +145,41 @@ stopword_set = set(stopwords.words("english"))
 stemmer = PorterStemmer()
 #stemmer = SnowballStemmer('english')
 
-document = '\n '.join(temp_sentences)
-document = document.replace(r"'s", "  is")
-document = document.replace(r"'ve", " have")
-document = document.replace(r"can't", "cannot")
-document = document.replace(r"musn't", "must not")
-document = document.replace(r"n't", " not")
-document = document.replace(r"i'm", "i am")
-document = document.replace(r"'re", " are")
-document = document.replace(r"'d", " would")
-document = document.replace(r"\'ll", " will")
-document = document.replace(r",", " ")
-document = document.replace(r".", " . ")
-document = document.replace(r"!", " ! ")
-document = document.replace(r"pt", " pt ")
-document = document.replace(r"(", "")
-document = document.replace(r")", "")
-document = document.replace(r"=", "")
-#document = document.replace(r"/", " ")
-document = document.replace(r"^", " ^ ")
-document = document.replace(r"+", " + ")
-document = document.replace(r"-", " - ")
-document = document.replace(r"=", " = ")
-document = document.replace(r"'", " ")
-document = document.replace(r":", " : ")
-document = document.replace(r" e g ", " eg ")
-document = document.replace(r" b g ", " bg ")
-document = document.replace(r" u s ", " united states ")
-document = document.replace(r" 9 11 ", "911")
-document = document.replace(r"e - mail", "email")
-document = document.replace(r"e-mail", "email")
-document = document.replace(r" e mail", "email")
-document = document.replace(r"email", "email")
-document = document.replace(r"j k", "jk")
-document = document.replace(r"shoulda", "should have")
-document = document.replace(r"coulda", "could have")
-document = document.replace(r"woulda", "would have")
-document = document.replace(r"http", "")
-document = document.replace(r"c/o", "complains of")
-document = document.replace(r"h/o", "history of")
-document = document.replace(r"yrs", "years")
-document = document.replace(r"pmh", "past medical history")
-document = document.replace(r"psh", "past surgical history")
-document = document.replace(r"b/l", "bilateral")
-document = document.replace(r"nkda", "no known drug allergies")
-document = document.replace(r"crf", "chronic renal failure")
-document = document.replace(r"arf", "acute renal failure")
-document = document.replace(r"w/", "with")
-document = document.replace(r" m ", " male ")
-document = document.replace(r" f ", " female ")
-document = document.replace(r" ys ", " years ")
-document = document.replace(r" r ", " right ")
-document = document.replace(r" rt ", " right ")
-document = document.replace(r" l ", " left ")
-document = document.replace(r" lt ", " left ")
-document = document.replace(r" pt ", " patient ")
-document = document.replace(r" yo ", " years old ")
-document = document.replace(r" yr ", " years old ")
-document = document.replace(r" x ", " times ")
-document = document.split('\n ')
+doc = document('\n '.join(temp_sentences))
+doc.do_replaces()
+doc.make_sentences('\n ')
 
-if stemmer:
-    for i, sentence in enumerate(document):
-        document[i] = ' '.join([stemmer.stem(w) for w in sentence.split() if w not in stopword_set])
+for sent in doc.sentences:
+    sent.stem_and_check_stop(stopword_set)
 
-tokens = [re.split(r'[-\s.,;!?]+', i)[:-1] for i in document]
-sentences = [' '.join(i) for i in tokens]
+for sent in doc.sentences:
+    sent.make_one_gram_tokens()
+
+for sent in doc.sentences:
+    sent.text=' '.join(sent.get_one_gram_tokens())
+
 #corpus = {}
 #for i, sentence in enumerate(tokens):
 #    corpus['sent' + str(i)] = Counter(sentence)
 #df = pd.DataFrame.from_records(corpus).fillna(0).astype(int).T
 
 #%% TF-IDF
+##lexicon is in ordercompare which words exist in other lexicons
+doc.make_lexicon()
 
-doc_tokens = []
-for tok in tokens:
-    doc_tokens += [sorted(tok)]
-lexicon = sorted(set(sum(doc_tokens, [])))
-zero_vector = OrderedDict((token, 0) for token in lexicon)
+zero_vector = OrderedDict((tok, 0) for tok in doc.lexicon)
 
 tfidf = TfidfVectorizer(min_df=0.0,smooth_idf=True)
-tfs_dataframe = pd.DataFrame(tfidf.fit_transform(sentences).todense())
+tfs_dataframe = pd.DataFrame(tfidf.fit_transform(doc.get_sentences()).todense())
+
+#%% SVD
+## maybe change to t-SNE
 U, s, Vt = np.linalg.svd(tfs_dataframe.T)
 S = np.zeros((len(U), len(Vt)))
 pd.np.fill_diagonal(S, s)
-#pd.DataFrame(S).round(1)
+pd.DataFrame(S).round(1)
 
-#%% err
-
+#%% SVD err
 err = []
 for numdim in range(len(s), 0, -1):
     S[numdim - 1, numdim - 1] = 0
@@ -147,14 +193,15 @@ ts.plot()
 plt.show()
 
 #%% Word2Vec
-
+#if some words in our lexicon dont exist in words2vec lexicon change them to 'unknown' token
+#check how to determine number of features
 num_features = 300
 min_word_count = 0
 num_workers = 2
 window_size = 5
 subsampling = 1e-3
 
-model = Word2Vec(sentences, min_count=0,size= 441,workers=2, window =5, sg = 0, sample= 1e-3)
+model = Word2Vec(doc.get_sentences(), min_count=0,size=num_features,workers=2, window =5, sg = 0, sample= 1e-3)
 
 
 #%% TF-IDF Manual
@@ -199,4 +246,3 @@ df = pd.DataFrame.from_records(corpus).T
 
 # Two-grams
 #tokens_two = list(ngrams(i, 2) for i in sentences)
-
