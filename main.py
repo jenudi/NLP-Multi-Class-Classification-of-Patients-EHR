@@ -155,16 +155,12 @@ class doc_set:
         return dict
 
 
-
-
-
 class sentence:
 
     def __init__(self,text):
         self.text=text
         self.original_text = text
         self.one_gram_tokens=[]
-
 
     def stem_and_check_stop(self,stopword_set):
         self.text = ' '.join([stemmer.stem(w) for w in self.text.split() if w not in stopword_set])
@@ -210,7 +206,7 @@ for sent in doc.sentences:
 #df = pd.DataFrame.from_records(corpus).fillna(0).astype(int).T
 
 #%% TF-IDF
-##lexicon is in ordercompare which words exist in other lexicons
+#lexicon is used to compare which words exist in other lexicons
 
 doc.train_test_split()
 doc.train.make_lexicon()
@@ -223,16 +219,17 @@ clustering = DBSCAN(eps=3, min_samples=50).fit(doc.train.tfidf.todense())
 print("number of groups: " + str())
 '''
 #%% K-means
-#n_clusters=range(5,)
-num_of_clusters=10
-kmeans = KMeans(n_clusters=num_of_clusters, random_state=0).fit(doc.train.tfidf.todense())
-dict=doc.train.clusters_to_sentences_indexes_dict(kmeans.labels_,num_of_clusters)
-for cluster_num in range(num_of_clusters):
-    print("current cluster "+ str(cluster_num))
-    for sent_index in dict[cluster_num]:
-        print(doc.train.get_original_sentences()[sent_index])
+clusters_range=range(5,11)
+for clusters_num in clusters_range:
+    print("clusters number: "+str(clusters_num))
+    kmeans = KMeans(n_clusters=clusters_num, random_state=0).fit(doc.train.tfidf.todense())
+    dict=doc.train.clusters_to_sentences_indexes_dict(kmeans.labels_,clusters_num)
+    for cur_cluster in range(clusters_num):
+        print("current cluster "+str(cur_cluster))
+        for sent_index in dict[cur_cluster]:
+            print(doc.train.get_original_sentences()[sent_index])
+        print('\n')
     print('\n')
-
 
 #%% SVD
 ## maybe change to t-SNE
