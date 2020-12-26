@@ -10,6 +10,9 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from collections import OrderedDict
 import matplotlib.pyplot as plt
 from gensim.models.word2vec import Word2Vec
+from sklearn.cluster import DBSCAN
+from sklearn.cluster import KMeans
+
 
 from nltk.stem import SnowballStemmer
 from collections import Counter
@@ -42,10 +45,9 @@ class document:
     def __init__(self,text):
         self.text=text
         self.sentences=[]
-        self.lexicon=[]
-        self.train = []
-        self.validation = []
-        self.test = []
+        self.train = doc_set([])
+        self.validation = doc_set([])
+        self.test = doc_set([])
 
     def do_replaces(self):
         self.text = self.text.replace(r"'s", "  is")
@@ -111,28 +113,46 @@ class document:
     def get_sentences(self):
         return [sent.text for sent in self.sentences]
 
-
-
     def train_test_split(self, validation=20,test=30):
-        shuffled_sentences = self.sentences.copy()
-        random.shuffle(shuffled_sentences)
+        random.shuffle(self.sentences)
         train_len = len(self.sentences)-(validation+test)
-        self.train = shuffled_sentences[0:train_len]
-        self.validation = shuffled_sentences[train_len:train_len+validation]
-        self.test = shuffled_sentences[train_len+validation:]
+        self.train = doc_set(self.sentences[0:train_len])
+        self.validation = doc_set(self.sentences[train_len:train_len+validation])
+        self.test = doc_set(self.sentences[train_len+validation:])
 
 
 class doc_set:
 
     def __init__(self, sentences):
-        self.doc_set = doc_set
+        self.sentences = sentences
         self.lexicon = []
+        tfidf=[]
 
-    def make_lexicon(self, sentences=[]):
+    def get_sentences(self):
+        return [sent.text for sent in self.sentences]
+
+    def make_lexicon(self):
         doc_tokens=[]
-        for sent in doc_set:
+        for sent in self.sentences:
             doc_tokens += [sorted(sent.get_one_gram_tokens())]
         self.lexicon = sorted(set(sum(doc_tokens, [])))
+
+    def get_zero_vector(self):
+        return OrderedDict((tok, 0) for tok in self.lexicon)
+
+    def make_tfidf(self):
+        tfidf = TfidfVectorizer(min_df=0.0, smooth_idf=True, norm='l1')
+        self.tfidf = tfidf.fit_transform(self.get_sentences())
+
+    def clusters_to_sentences_indexes_dict(self,clusters,num_of_clusters):
+        dict={}
+        for cluster_num in range(num_of_clusters):
+            true_clusters=clusters==cluster_num
+            dict[cluster_num]=[index for index, truth_value in enumerate(true_clusters) if truth_value]
+        return dict
+
+
+
 
 
 class sentence:
@@ -154,6 +174,8 @@ class sentence:
 class token:
     def __init__(self,text):
         self.text=text
+
+
 try:
     _ = stopwords.words("english")
 except LookupError:
@@ -184,11 +206,28 @@ for sent in doc.sentences:
 
 #%% TF-IDF
 ##lexicon is in ordercompare which words exist in other lexicons
-doc.make_lexicon()
-zero_vector = OrderedDict((tok, 0) for tok in doc.lexicon)
 
-tfidf = TfidfVectorizer(min_df=0.0,smooth_idf=True)
-tfs_dataframe = pd.DataFrame(tfidf.fit_transform(doc.get_sentences()).todense())
+doc.train_test_split()
+doc.train.make_lexicon()
+doc.train.make_tfidf()
+
+#%% DBSCAN
+'''
+epsilons=[0.1:0.1:1]
+clustering = DBSCAN(eps=3, min_samples=50).fit(doc.train.tfidf.todense())
+print("number of groups: " + str())
+'''
+#%% K-means
+#n_clusters=range(5,)
+num_of_clusters=10
+kmeans = KMeans(n_clusters=num_of_clusters, random_state=0).fit(doc.train.tfidf.todense())
+dict=doc.train.clusters_to_sentences_indexes_dict(kmeans.labels_,num_of_clusters)
+#for cluster_num in range(num_of_clusters):
+for cluster_num in [1]:
+    print("current cluster "+ str(cluster_num))
+    for sent_i in dict[cluster_num]:
+        print(doc.train.get_sentences()[sent_i])
+
 
 #%% SVD
 ## maybe change to t-SNE
