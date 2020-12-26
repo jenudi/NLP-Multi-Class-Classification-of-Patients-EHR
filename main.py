@@ -131,6 +131,9 @@ class doc_set:
     def get_sentences(self):
         return [sent.text for sent in self.sentences]
 
+    def get_original_sentences(self):
+        return [sent.original_text for sent in self.sentences]
+
     def make_lexicon(self):
         doc_tokens=[]
         for sent in self.sentences:
@@ -159,7 +162,9 @@ class sentence:
 
     def __init__(self,text):
         self.text=text
+        self.original_text = text
         self.one_gram_tokens=[]
+
 
     def stem_and_check_stop(self,stopword_set):
         self.text = ' '.join([stemmer.stem(w) for w in self.text.split() if w not in stopword_set])
@@ -222,11 +227,11 @@ print("number of groups: " + str())
 num_of_clusters=10
 kmeans = KMeans(n_clusters=num_of_clusters, random_state=0).fit(doc.train.tfidf.todense())
 dict=doc.train.clusters_to_sentences_indexes_dict(kmeans.labels_,num_of_clusters)
-#for cluster_num in range(num_of_clusters):
-for cluster_num in [1]:
+for cluster_num in range(num_of_clusters):
     print("current cluster "+ str(cluster_num))
-    for sent_i in dict[cluster_num]:
-        print(doc.train.get_sentences()[sent_i])
+    for sent_index in dict[cluster_num]:
+        print(doc.train.get_original_sentences()[sent_index])
+    print('\n')
 
 
 #%% SVD
