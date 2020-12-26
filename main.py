@@ -3,6 +3,7 @@
 import pandas as pd
 import numpy as np
 import re
+import random
 from nltk.corpus import stopwords
 from nltk.stem.porter import PorterStemmer
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -42,6 +43,9 @@ class document:
         self.text=text
         self.sentences=[]
         self.lexicon=[]
+        self.train = []
+        self.validation = []
+        self.test = []
 
     def do_replaces(self):
         self.text = self.text.replace(r"'s", "  is")
@@ -107,9 +111,26 @@ class document:
     def get_sentences(self):
         return [sent.text for sent in self.sentences]
 
-    def make_lexicon(self):
+
+
+    def train_test_split(self, validation=20,test=30):
+        shuffled_sentences = self.sentences.copy()
+        random.shuffle(shuffled_sentences)
+        train_len = len(self.sentences)-(validation+test)
+        self.train = shuffled_sentences[0:train_len]
+        self.validation = shuffled_sentences[train_len:train_len+validation]
+        self.test = shuffled_sentences[train_len+validation:]
+
+
+class doc_set:
+
+    def __init__(self, sentences):
+        self.doc_set = doc_set
+        self.lexicon = []
+
+    def make_lexicon(self, sentences=[]):
         doc_tokens=[]
-        for sent in self.sentences:
+        for sent in doc_set:
             doc_tokens += [sorted(sent.get_one_gram_tokens())]
         self.lexicon = sorted(set(sum(doc_tokens, [])))
 
@@ -133,8 +154,6 @@ class sentence:
 class token:
     def __init__(self,text):
         self.text=text
-
-
 try:
     _ = stopwords.words("english")
 except LookupError:
@@ -166,7 +185,6 @@ for sent in doc.sentences:
 #%% TF-IDF
 ##lexicon is in ordercompare which words exist in other lexicons
 doc.make_lexicon()
-
 zero_vector = OrderedDict((tok, 0) for tok in doc.lexicon)
 
 tfidf = TfidfVectorizer(min_df=0.0,smooth_idf=True)
@@ -186,7 +204,6 @@ for numdim in range(len(s), 0, -1):
     tfs_dataframe_reconstructed = U.dot(S).dot(Vt)
     err.append(np.sqrt(((tfs_dataframe_reconstructed - tfs_dataframe.T).values.flatten() ** 2).sum() / np.product(tfs_dataframe.T.shape)))
 np.array(err).round(2)
-
 
 ts = ts.cumsum()
 ts.plot()
