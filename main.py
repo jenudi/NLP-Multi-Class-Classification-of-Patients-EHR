@@ -106,6 +106,7 @@ class document:
         self.text = self.text.replace(r" yo ", " years old ")
         self.text = self.text.replace(r" yr ", " years old ")
         self.text = self.text.replace(r" x ", " times ")
+        self.text = self.text.replace(r" sym ", " symptom ")
 
     def make_sentences(self,char):
         self.sentences = [sentence(sent) for sent in self.text.split(char)]
@@ -219,17 +220,21 @@ clustering = DBSCAN(eps=3, min_samples=50).fit(doc.train.tfidf.todense())
 print("number of groups: " + str())
 '''
 #%% K-means
-clusters_range=range(5,11)
+#train is in order to name the clusters
+#validation is in order to choose the optimal k by comparing the group assignment by k means
+clusters_range=[30]
 for clusters_num in clusters_range:
     print("clusters number: "+str(clusters_num))
     kmeans = KMeans(n_clusters=clusters_num, random_state=0).fit(doc.train.tfidf.todense())
     dict=doc.train.clusters_to_sentences_indexes_dict(kmeans.labels_,clusters_num)
     for cur_cluster in range(clusters_num):
-        print("current cluster "+str(cur_cluster))
+        print("train:")
+        print("current cluster "+str(cur_cluster+1))
         for sent_index in dict[cur_cluster]:
             print(doc.train.get_original_sentences()[sent_index])
         print('\n')
     print('\n')
+
 
 #%% SVD
 ## maybe change to t-SNE
