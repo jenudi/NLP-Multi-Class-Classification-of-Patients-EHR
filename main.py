@@ -127,7 +127,8 @@ class doc_set:
     def __init__(self, sentences):
         self.sentences = sentences
         self.lexicon = []
-        tfidf=[]
+        self.tfidf = None
+        self.tfidf_transform = None
 
     def get_sentences(self):
         return [sent.text for sent in self.sentences]
@@ -146,12 +147,13 @@ class doc_set:
 
     def make_tfidf(self):
         tfidf = TfidfVectorizer(min_df=0.0, smooth_idf=True, norm='l1')
-        self.tfidf = tfidf.fit_transform(self.get_sentences())
+        self.tfidf = tfidf.fit(self.get_sentences())
+        self.tfidf_transform = self.tfidf.transform(self.get_sentences())
 
     def clusters_to_sentences_indexes_dict(self,clusters,num_of_clusters):
         dict={}
         for cluster_num in range(num_of_clusters):
-            true_clusters=clusters==cluster_num
+            true_clusters= clusters==cluster_num
             dict[cluster_num]=[index for index, truth_value in enumerate(true_clusters) if truth_value]
         return dict
 
@@ -213,6 +215,8 @@ doc.train_test_split()
 doc.train.make_lexicon()
 doc.train.make_tfidf()
 
+
+
 #%% DBSCAN
 '''
 epsilons=[0.1:0.1:1]
@@ -222,19 +226,38 @@ print("number of groups: " + str())
 #%% K-means
 #train is in order to name the clusters
 #validation is in order to choose the optimal k by comparing the group assignment by k means
-clusters_range=[30]
-for clusters_num in clusters_range:
-    print("clusters number: "+str(clusters_num))
-    kmeans = KMeans(n_clusters=clusters_num, random_state=0).fit(doc.train.tfidf.todense())
-    dict=doc.train.clusters_to_sentences_indexes_dict(kmeans.labels_,clusters_num)
-    for cur_cluster in range(clusters_num):
-        print("train:")
-        print("current cluster "+str(cur_cluster+1))
-        for sent_index in dict[cur_cluster]:
-            print(doc.train.get_original_sentences()[sent_index])
-        print('\n')
+#clusters_range=[30]
+#for clusters_num in clusters_range:
+
+k = 30
+print("clusters number: "+str(k))
+kmeans = KMeans(n_clusters=k, random_state=0).fit(doc.train.tfidf_transform.todense())
+test_predict = kmeans.predict(doc.train.tfidf.transform(doc.test.get_sentences()).todense())
+dict=doc.train.clusters_to_sentences_indexes_dict(kmeans.labels_,k)
+for key in dict.keys():
+    if key in test_predict:
+        temp_list = [i for i,v in enumerate(test_predict) if v == key]
+        print(f'Test sentences in cluster num {key+1}')
+        for j in temp_list:
+            print(f' sentence: {doc.test.get_original_sentences()[j]}')
+    else:
+        print(f'There is not any sentences in {key+1}')
+    print('\n')
+    print(f'Train sentences in cluster num {key+1}')
+    for index in dict[key]:
+        print(doc.train.get_original_sentences()[index])
     print('\n')
 
+
+"""     
+for cur_cluster in range(clusters_num):
+    print("train:")
+    print("current cluster "+str(cur_cluster+1))
+    for sent_index in dict[cur_cluster]:
+        print(doc.train.get_original_sentences()[sent_index])
+    print('\n')
+print('\n')
+"""
 
 #%% SVD
 ## maybe change to t-SNE
@@ -258,13 +281,18 @@ plt.show()
 #%% Word2Vec
 #if some words in our lexicon dont exist in words2vec lexicon change them to 'unknown' token
 #check how to determine number of features
+
 num_features = 300
 min_word_count = 0
 num_workers = 2
 window_size = 5
 subsampling = 1e-3
 
-model = Word2Vec(doc.get_sentences(), min_count=0,size=num_features,workers=2, window =5, sg = 0, sample= 1e-3)
+model = Word2Vec(doc.train.get_sentences(), min_count=0,size=num_features,workers=2, window =5, sg = 0, sample= 1e-3)
+
+doc.train.sentences.
+
+
 
 
 #%% TF-IDF Manual
