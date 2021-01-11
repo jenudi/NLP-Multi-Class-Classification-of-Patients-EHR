@@ -13,7 +13,6 @@ from gensim.models.word2vec import Word2Vec
 from sklearn.cluster import DBSCAN
 from sklearn.cluster import KMeans
 
-
 from nltk.stem import SnowballStemmer
 from collections import Counter
 import copy
@@ -290,7 +289,7 @@ subsampling = 1e-3
 
 model = Word2Vec(doc.train.get_sentences(), min_count=0,size=num_features,workers=2, window =5, sg = 0, sample= 1e-3)
 
-doc.train.sentences.
+#doc.train.sentences.
 
 
 
