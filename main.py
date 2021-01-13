@@ -248,14 +248,43 @@ for key in dict.keys():
     print('\n')
 
 
+#%% Word2Vec
+#if some words in our lexicon dont exist in words2vec lexicon change them to 'unknown' token
+#check how to determine number of features
+
+# Word2Vec Hyper-parameters:
+# 1.Number of tokens
+# 2. alpha - learning rate
+# 3. window
+# 4. Size of vector
+# 5. Compare it to other models
+
+# After the training one should load the saved model, so the following code should not executed again:
+"""
+word2vec_model = Word2Vec(min_count=0,
+                          window=5,
+                          size=300,
+                          sample=1e-3,
+                          alpha=0.03,
+                          min_alpha=0.0007,
+                          workers=1)
+temp_list = [sent.get_one_gram_tokens() for sent in doc.train.sentences]
+word2vec_model.build_vocab(temp_list)
+word2vec_model.train(temp_list,total_examples=word2vec_model.corpus_count,epochs=30)
+word2vec_model.save("word2vec.model")
+"""
+word2vec_model = Word2Vec.load("word2vec.model")
+
+
+
 """     
 for cur_cluster in range(clusters_num):
     print("train:")
     print("current cluster "+str(cur_cluster+1))
     for sent_index in dict[cur_cluster]:
         print(doc.train.get_original_sentences()[sent_index])
-    print('\n')
-print('\n')
+    r"\n"
+print(r'\n')
 """
 
 #%% SVD
@@ -276,21 +305,6 @@ np.array(err).round(2)
 ts = ts.cumsum()
 ts.plot()
 plt.show()
-
-#%% Word2Vec
-#if some words in our lexicon dont exist in words2vec lexicon change them to 'unknown' token
-#check how to determine number of features
-
-num_features = 300
-min_word_count = 0
-num_workers = 2
-window_size = 5
-subsampling = 1e-3
-
-model = Word2Vec(doc.train.get_sentences(), min_count=0,size=num_features,workers=2, window =5, sg = 0, sample= 1e-3)
-
-#doc.train.sentences.
-
 
 
 
