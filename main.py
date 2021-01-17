@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from gensim.models.word2vec import Word2Vec
 from sklearn.cluster import DBSCAN
 from sklearn.cluster import KMeans
+from gensim.models.keyedvectors import KeyedVectors
 
 from nltk.stem import SnowballStemmer
 from collections import Counter
@@ -210,7 +211,9 @@ for sent in doc.sentences:
 #%% TF-IDF
 #lexicon is used to compare which words exist in other lexicons
 
-doc.train_test_split()
+#doc.train_test_split(validation=20,test=30)
+
+doc.train_test_split(validation=50,test=50)
 doc.train.make_lexicon()
 doc.train.make_tfidf()
 
@@ -260,7 +263,7 @@ for key in dict.keys():
 # 5. Compare it to other models
 
 # After the training one should load the saved model, so the following code should not executed again:
-"""
+
 word2vec_model = Word2Vec(min_count=0,
                           window=5,
                           size=300,
@@ -268,24 +271,92 @@ word2vec_model = Word2Vec(min_count=0,
                           alpha=0.03,
                           min_alpha=0.0007,
                           workers=1)
+
 temp_list = [sent.get_one_gram_tokens() for sent in doc.train.sentences]
 word2vec_model.build_vocab(temp_list)
 word2vec_model.train(temp_list,total_examples=word2vec_model.corpus_count,epochs=30)
-word2vec_model.save("word2vec.model")
-"""
+#word2vec_model.save("word2vec.model")
+
 word2vec_model = Word2Vec.load("word2vec.model")
 
 
 
-"""     
-for cur_cluster in range(clusters_num):
-    print("train:")
-    print("current cluster "+str(cur_cluster+1))
-    for sent_index in dict[cur_cluster]:
-        print(doc.train.get_original_sentences()[sent_index])
-    r"\n"
-print(r'\n')
-"""
+tokens = [sent.get_one_gram_tokens() for sent in doc.train.sentences]
+tokens_val = [sent.get_one_gram_tokens() for sent in doc.validation.sentences]
+
+#### Our own Word 2 Vec
+
+
+# For lambda = 1
+
+
+newl = list()
+for i,v in enumerate(tokens):
+    a = np.zeros(300)
+    for j in v:
+        a += word2vec_model.wv[j]
+    newl.append(a)
+
+
+
+
+newl_val = list()
+for i,v in enumerate(tokens_val):
+    a = np.zeros(300)
+    for j in v:
+        a += word2vec_model.wv[j]
+    newl_val.append(a)
+
+
+k = 30
+print("clusters number: "+str(k))
+kmeans = KMeans(n_clusters=k, random_state=0).fit(newl)
+test_predict = kmeans.predict(newl_val)
+dict=doc.train.clusters_to_sentences_indexes_dict(kmeans.labels_,k)
+for key in dict.keys():
+    if key in test_predict:
+        temp_list = [i for i,v in enumerate(test_predict) if v == key]
+        print(f'Test sentences in cluster num {key+1}')
+        for j in temp_list:
+            print(f' sentence: {doc.test.get_original_sentences()[j]}')
+    else:
+        print(f'There is not any sentences in {key+1}')
+    print('\n')
+    print(f'Train sentences in cluster num {key+1}')
+    for index in dict[key]:
+        print(doc.train.get_original_sentences()[index])
+    print('\n')
+
+
+#### PubMed Word 2 Vec
+
+word_vectors = KeyedVectors.load_word2vec_format('../RANZCR/PubMed-w2v.bin', binary=True)
+#word_vectors.save("word2vec_pubmed.model")
+word_vectors = Word2Vec.load("word2vec_pubmed.model")
+
+
+sent_train = doc.train.get_original_sentences()
+
+newl = list()
+for i,v in enumerate(doc.train.get_original_sentences()):
+    a = np.zeros(200)
+    for j in v.split():
+        if j not in word_vectors.vocab.keys():
+            a += np.zeros(200)
+        else:
+            a += word_vectors.wv[j]
+    newl.append(a)
+
+newl_val = list()
+for i,v in enumerate(doc.validation.get_original_sentences()):
+    a = np.zeros(200)
+    for j in v.split():
+        if j not in word_vectors.vocab.keys():
+            a += np.zeros(200)
+        else:
+            a += word_vectors.wv[j]
+    newl_val.append(a)
+
 
 #%% SVD
 ## maybe change to t-SNE
