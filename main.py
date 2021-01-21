@@ -110,7 +110,9 @@ class document_set:
         self.sentences = sentences
         self.lexicon = list()
         self.tfidf = list()
+        self.tfidf_clusters_labels=list()
         self.word2vec = dict()
+        self.word2vec_clusters_labels = dict()
 
     def get_sentences(self):
         return [sentence.text for sentence in self.sentences]
@@ -142,26 +144,25 @@ class document_set:
             self.word2vec[hyperparameter_lambda].append(word_embeddings_with_lambda_normalised)
 
     def clusters_to_sentences_indexes_dict(self,clusters,num_of_clusters):
-        dict={}
+        clusters_sentences_indexes_dict=dict()
         for cluster_num in range(num_of_clusters):
-            true_clusters = (clusters==cluster_num)
-            dict[cluster_num]=[index for index, truth_value in enumerate(true_clusters) if truth_value]
-        return dict
+            true_clusters = clusters==cluster_num
+            clusters_sentences_indexes_dict[cluster_num]=[index for index, truth_value in enumerate(true_clusters) if truth_value]
+        return clusters_sentences_indexes_dict
 
 
 class sentence_in_document:
 
     def __init__(self,text):
         self.text=text
-        self.original_text = text
-        self.one_gram_tokens=[]
+        self.original_text=text
+        self.one_gram_tokens=list()
 
     def stem_and_check_stop(self,stopword_set):
         self.text = ' '.join([stemmer.stem(w) for w in self.text.split() if w not in stopword_set])
 
     def make_one_gram_tokens(self):
         self.one_gram_tokens = re.split(r'[-\s.,;!?]+', self.text)[:-1]
-
 
 def print_sentences_by_clusters(clusters_dict, test_predict):
     for key in clusters_dict.keys():
@@ -196,8 +197,6 @@ temp_sentences = [i[0].strip().strip('s:').lower() for i in soap_temp]
 
 
 #%% Pre-processing
-
-
 
 try:
     _ = stopwords.words("english")
@@ -244,18 +243,26 @@ doc.train.make_lexicon()
 tfidf_model = TfidfVectorizer(min_df=0.0, smooth_idf=True, norm='l1')
 tfidf_trained=tfidf_model.fit(doc.train.get_sentences())
 doc.train.make_tfidf(tfidf_trained)
+doc.validation.make_tfidf(tfidf_trained)
 doc.test.make_tfidf(tfidf_trained)
 
 
 
 k = 30
+
 kmeans_tfidf_model = KMeans(n_clusters=k, random_state=0).fit(doc.train.tfidf)
-kmeans_tfidf_predict = kmeans_tfidf_model.predict(doc.test.tfidf)
-tfidf_clusters_dict=doc.train.clusters_to_sentences_indexes_dict(kmeans_tfidf_model.labels_,k)
+
+doc.train.tfidf_clusters_labels=kmeans_tfidf_model.labels_
+
+doc.validation.tfidf_clusters_labels = kmeans_tfidf_model.predict(doc.validation.tfidf)
+
+doc.test.tfidf_clusters_labels=kmeans_tfidf_model.predict(doc.test.tfidf)
+
+tfidf_clusters_dict=doc.train.clusters_to_sentences_indexes_dict(doc.train.tfidf_clusters_labels,k)
 
 if __name__=="__main__":
     print(f'Clusters number = {k}\n')
-    print_sentences_by_clusters(tfidf_clusters_dict,kmeans_tfidf_predict)
+    print_sentences_by_clusters(tfidf_clusters_dict,doc.test.tfidf_clusters_labels)
 
 
 #%% Word2Vec
@@ -290,14 +297,23 @@ for hyperparameter_lambda in [0,0.5,1]:
 
     doc.train.make_word2vec(word2vec_model,hyperparameter_lambda)
     doc.validation.make_word2vec(word2vec_model,hyperparameter_lambda)
+    doc.test.make_word2vec(word2vec_model,hyperparameter_lambda)
 
     kmeans_word2vec_model = KMeans(n_clusters=k, random_state=0).fit(doc.train.word2vec[hyperparameter_lambda])
-    kmeans_word2vec_predict = kmeans_word2vec_model.predict(doc.validation.word2vec[hyperparameter_lambda])
-    word2vec_clusters_dict=doc.train.clusters_to_sentences_indexes_dict(kmeans_word2vec_model.labels_,k)
+
+    doc.train.word2vec_clusters_labels[hyperparameter_lambda] = kmeans_word2vec_model.labels_
+
+    doc.validation.word2vec_clusters_labels[hyperparameter_lambda] = kmeans_word2vec_model.predict(doc.validation.word2vec[hyperparameter_lambda])
+
+    doc.test.word2vec_clusters_labels[hyperparameter_lambda] = kmeans_word2vec_model.predict(doc.test.word2vec[hyperparameter_lambda])
+
+    word2vec_clusters_dict=doc.train.clusters_to_sentences_indexes_dict(doc.train.word2vec_clusters_labels[hyperparameter_lambda],k)
 
     if __name__ == "__main__":
         print(f'Clusters number = {k}, lambda = {hyperparameter_lambda}\n')
-        print_sentences_by_clusters(word2vec_clusters_dict, kmeans_word2vec_predict)
+        print_sentences_by_clusters(word2vec_clusters_dict, doc.validation.tfidf_clusters_labels)
+
+chosen_lambda=1
 
 '''
 #### PubMed Word 2 Vec
