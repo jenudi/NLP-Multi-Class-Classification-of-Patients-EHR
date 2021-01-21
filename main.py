@@ -19,34 +19,17 @@ import copy
 from nltk.util import ngrams
 import nltk
 
-#%% Loading Data
 
-encounter_data = pd.read_csv("encounter.csv").rename(str.lower, axis='columns')
-encounter_dx = pd.read_csv("encounter_dx.csv").rename(str.lower, axis='columns')
-lab_results = pd.read_csv("lab_results.csv").rename(str.lower, axis='columns')
-
-data1=encounter_data[['encounter_id','member_id', 'patient_gender', 'has_appt', 'soap_note']].set_index('encounter_id').sort_index()
-data2=encounter_dx.groupby('encounter_id')['code', 'description', 'severity'].apply(lambda x: list(x.values)).sort_index()
-data3=lab_results.groupby('encounter_id')['result_name','result_description','numeric_result', 'units'].apply(lambda x: list(x.values)).sort_index()
-
-data=pd.concat([data1,data2,data3],axis=1)
-data=data.rename(columns={0:'code_description_severity', 1:'result_name_result-description_numeric-result_units'})
-
-soap = data['soap_note'].dropna().reset_index(drop=True)
-soap_temp = [re.split('o:''|''o :', i) for i in soap] # split by "o:" or "o :"
-temp_sentences = [i[0].strip().strip('s:').lower() for i in soap_temp]
-
-
-#%% Pre-processing
+#%% Classes and functions
 
 class document:
 
     def __init__(self,text):
         self.text=text
-        self.sentences=[]
-        self.train = doc_set([])
-        self.validation = doc_set([])
-        self.test = doc_set([])
+        self.sentences=list()
+        self.train = document_set(list())
+        self.validation = document_set(list())
+        self.test = document_set(list())
 
     def do_replaces(self):
         self.text = self.text.replace(r"'s", "  is")
@@ -108,39 +91,38 @@ class document:
         self.text = self.text.replace(r" sym ", " symptom ")
 
     def make_sentences(self,char):
-        self.sentences = [sentence(sent) for sent in self.text.split(char)]
+        self.sentences = [sentence_in_document(sentence) for sentence in self.text.split(char)]
 
     def get_sentences(self):
-        return [sent.text for sent in self.sentences]
+        return [sentence.text for sentence in self.sentences]
 
     def train_test_split(self, validation=20,test=30):
         random.shuffle(self.sentences)
         train_len = len(self.sentences)-(validation+test)
-        self.train = doc_set(self.sentences[0:train_len])
-        self.validation = doc_set(self.sentences[train_len:train_len+validation])
-        self.test = doc_set(self.sentences[train_len+validation:])
+        self.train = document_set(self.sentences[0:train_len])
+        self.validation = document_set(self.sentences[train_len:train_len+validation])
+        self.test = document_set(self.sentences[train_len+validation:])
 
 
-class doc_set:
+class document_set:
 
     def __init__(self, sentences):
         self.sentences = sentences
         self.lexicon = list()
         self.tfidf = list()
-        self.word2vec = list()
-
+        self.word2vec = dict()
 
     def get_sentences(self):
         return [sentence.text for sentence in self.sentences]
 
     def get_original_sentences(self):
-        return [sent.original_text for sent in self.sentences]
+        return [sentence.original_text for sentence in self.sentences]
 
     def get_sentences_tokens(self):
         return [sentence.one_gram_tokens for sentence in self.sentences]
 
     def make_lexicon(self):
-        doc_tokens=[]
+        doc_tokens=list()
         for sentence in self.sentences:
             doc_tokens += [sorted(sentence.one_gram_tokens)]
         self.lexicon = sorted(set(sum(doc_tokens, [])))
@@ -152,12 +134,12 @@ class doc_set:
         self.tfidf = model.transform(self.get_sentences()).todense()
 
     def make_word2vec(self,word2vec_model,hyperparameter_lambda):
-        self.word2vec=list()
+        self.word2vec[hyperparameter_lambda]=list()
         for sentence_tokens in self.get_sentences_tokens():
             word_embeddings= np.array([word2vec_model.wv[token] for token in sentence_tokens])
             word_embeddings_with_lambda=np.mean(word_embeddings,axis=0)*(len(word_embeddings)**hyperparameter_lambda)
             word_embeddings_with_lambda_normalised=word_embeddings_with_lambda/np.linalg.norm(word_embeddings_with_lambda)
-            self.word2vec.append(word_embeddings_with_lambda_normalised)
+            self.word2vec[hyperparameter_lambda].append(word_embeddings_with_lambda_normalised)
 
     def clusters_to_sentences_indexes_dict(self,clusters,num_of_clusters):
         dict={}
@@ -167,7 +149,7 @@ class doc_set:
         return dict
 
 
-class sentence:
+class sentence_in_document:
 
     def __init__(self,text):
         self.text=text
@@ -193,6 +175,28 @@ def print_sentences_by_clusters(clusters_dict, test_predict):
             for index in clusters_dict[key]:
                 print(doc.train.get_original_sentences()[index])
             print('\n')
+
+
+#%% Loading Data
+
+encounter_data = pd.read_csv("encounter.csv").rename(str.lower, axis='columns')
+encounter_dx = pd.read_csv("encounter_dx.csv").rename(str.lower, axis='columns')
+lab_results = pd.read_csv("lab_results.csv").rename(str.lower, axis='columns')
+
+data1=encounter_data[['encounter_id','member_id', 'patient_gender', 'has_appt', 'soap_note']].set_index('encounter_id').sort_index()
+data2=encounter_dx.groupby('encounter_id')['code', 'description', 'severity'].apply(lambda x: list(x.values)).sort_index()
+data3=lab_results.groupby('encounter_id')['result_name','result_description','numeric_result', 'units'].apply(lambda x: list(x.values)).sort_index()
+
+data=pd.concat([data1,data2,data3],axis=1)
+data=data.rename(columns={0:'code_description_severity', 1:'result_name_result-description_numeric-result_units'})
+
+soap = data['soap_note'].dropna().reset_index(drop=True)
+soap_temp = [re.split('o:''|''o :', i) for i in soap] # split by "o:" or "o :"
+temp_sentences = [i[0].strip().strip('s:').lower() for i in soap_temp]
+
+
+#%% Pre-processing
+
 
 
 try:
@@ -245,11 +249,13 @@ doc.test.make_tfidf(tfidf_trained)
 
 
 k = 30
-print(f'Clusters number = {k}\n')
 kmeans_tfidf_model = KMeans(n_clusters=k, random_state=0).fit(doc.train.tfidf)
 kmeans_tfidf_predict = kmeans_tfidf_model.predict(doc.test.tfidf)
 tfidf_clusters_dict=doc.train.clusters_to_sentences_indexes_dict(kmeans_tfidf_model.labels_,k)
-print_sentences_by_clusters(tfidf_clusters_dict,kmeans_tfidf_predict)
+
+if __name__=="__main__":
+    print(f'Clusters number = {k}\n')
+    print_sentences_by_clusters(tfidf_clusters_dict,kmeans_tfidf_predict)
 
 
 #%% Word2Vec
@@ -285,11 +291,13 @@ for hyperparameter_lambda in [0,0.5,1]:
     doc.train.make_word2vec(word2vec_model,hyperparameter_lambda)
     doc.validation.make_word2vec(word2vec_model,hyperparameter_lambda)
 
-    print(f'Clusters number = {k}, lambda = {hyperparameter_lambda}\n')
-    kmeans_word2vec_model = KMeans(n_clusters=k, random_state=0).fit(doc.train.word2vec)
-    kmeans_word2vec_predict = kmeans_word2vec_model.predict(doc.validation.word2vec)
+    kmeans_word2vec_model = KMeans(n_clusters=k, random_state=0).fit(doc.train.word2vec[hyperparameter_lambda])
+    kmeans_word2vec_predict = kmeans_word2vec_model.predict(doc.validation.word2vec[hyperparameter_lambda])
     word2vec_clusters_dict=doc.train.clusters_to_sentences_indexes_dict(kmeans_word2vec_model.labels_,k)
-    print_sentences_by_clusters(word2vec_clusters_dict, kmeans_word2vec_predict)
+
+    if __name__ == "__main__":
+        print(f'Clusters number = {k}, lambda = {hyperparameter_lambda}\n')
+        print_sentences_by_clusters(word2vec_clusters_dict, kmeans_word2vec_predict)
 
 '''
 #### PubMed Word 2 Vec
