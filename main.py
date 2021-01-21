@@ -169,7 +169,7 @@ def print_sentences_by_clusters(clusters_dict, test_predict):
             sentences_indexes_in_cluster = [index for index, value in enumerate(test_predict) if value == key]
             print(f'Test sentences in cluster number {key + 1}')
             for sentence_index in sentences_indexes_in_cluster:
-                print(f'Sentence: {doc.test.get_original_sentences()[sentence_index]}')
+                print(doc.test.get_original_sentences()[sentence_index])
             print('\n')
             print(f'Train sentences in cluster number {key + 1}')
             for index in clusters_dict[key]:
