@@ -13,7 +13,6 @@ from gensim.models.word2vec import Word2Vec
 from sklearn.cluster import DBSCAN
 from sklearn.cluster import KMeans
 from gensim.models.keyedvectors import KeyedVectors
-
 from nltk.stem import SnowballStemmer
 from collections import Counter
 import copy
@@ -126,34 +125,44 @@ class doc_set:
 
     def __init__(self, sentences):
         self.sentences = sentences
-        self.lexicon = []
-        self.tfidf = None
-        self.tfidf_transform = None
+        self.lexicon = list()
+        self.tfidf = list()
+        self.word2vec = list()
+
 
     def get_sentences(self):
-        return [sent.text for sent in self.sentences]
+        return [sentence.text for sentence in self.sentences]
 
     def get_original_sentences(self):
         return [sent.original_text for sent in self.sentences]
 
+    def get_sentences_tokens(self):
+        return [sentence.one_gram_tokens for sentence in self.sentences]
+
     def make_lexicon(self):
         doc_tokens=[]
-        for sent in self.sentences:
-            doc_tokens += [sorted(sent.get_one_gram_tokens())]
+        for sentence in self.sentences:
+            doc_tokens += [sorted(sentence.one_gram_tokens)]
         self.lexicon = sorted(set(sum(doc_tokens, [])))
 
     def get_zero_vector(self):
         return OrderedDict((tok, 0) for tok in self.lexicon)
 
-    def make_tfidf(self):
-        tfidf = TfidfVectorizer(min_df=0.0, smooth_idf=True, norm='l1')
-        self.tfidf = tfidf.fit(self.get_sentences())
-        self.tfidf_transform = self.tfidf.transform(self.get_sentences())
+    def make_tfidf(self,model):
+        self.tfidf = model.transform(self.get_sentences()).todense()
+
+    def make_word2vec(self,word2vec_model,hyperparameter_lambda):
+        self.word2vec=list()
+        for sentence_tokens in self.get_sentences_tokens():
+            word_embeddings= np.array([word2vec_model.wv[token] for token in sentence_tokens])
+            word_embeddings_with_lambda=np.mean(word_embeddings,axis=0)*(len(word_embeddings)**hyperparameter_lambda)
+            word_embeddings_with_lambda_normalised=word_embeddings_with_lambda/np.linalg.norm(word_embeddings_with_lambda)
+            self.word2vec.append(word_embeddings_with_lambda_normalised)
 
     def clusters_to_sentences_indexes_dict(self,clusters,num_of_clusters):
         dict={}
         for cluster_num in range(num_of_clusters):
-            true_clusters= clusters==cluster_num
+            true_clusters = (clusters==cluster_num)
             dict[cluster_num]=[index for index, truth_value in enumerate(true_clusters) if truth_value]
         return dict
 
@@ -169,15 +178,21 @@ class sentence:
         self.text = ' '.join([stemmer.stem(w) for w in self.text.split() if w not in stopword_set])
 
     def make_one_gram_tokens(self):
-        self.one_gram_tokens = [token(tok) for tok in re.split(r'[-\s.,;!?]+', self.text)[:-1]]
-
-    def get_one_gram_tokens(self):
-        return [tok.text for tok in self.one_gram_tokens]
+        self.one_gram_tokens = re.split(r'[-\s.,;!?]+', self.text)[:-1]
 
 
-class token:
-    def __init__(self,text):
-        self.text=text
+def print_sentences_by_clusters(clusters_dict, test_predict):
+    for key in clusters_dict.keys():
+        if key in test_predict:
+            sentences_indexes_in_cluster = [index for index, value in enumerate(test_predict) if value == key]
+            print(f'Test sentences in cluster number {key + 1}')
+            for sentence_index in sentences_indexes_in_cluster:
+                print(f'Sentence: {doc.test.get_original_sentences()[sentence_index]}')
+            print('\n')
+            print(f'Train sentences in cluster number {key + 1}')
+            for index in clusters_dict[key]:
+                print(doc.train.get_original_sentences()[index])
+            print('\n')
 
 
 try:
@@ -194,61 +209,47 @@ doc = document('\n '.join(temp_sentences))
 doc.do_replaces()
 doc.make_sentences('\n ')
 
-for sent in doc.sentences:
-    sent.stem_and_check_stop(stopword_set)
-
-for sent in doc.sentences:
-    sent.make_one_gram_tokens()
-
-for sent in doc.sentences:
-    sent.text=' '.join(sent.get_one_gram_tokens())
+for sentence in doc.sentences:
+    sentence.stem_and_check_stop(stopword_set)
+    sentence.make_one_gram_tokens()
+    sentence.text=' '.join(sentence.one_gram_tokens)
 
 #corpus = {}
 #for i, sentence in enumerate(tokens):
 #    corpus['sent' + str(i)] = Counter(sentence)
 #df = pd.DataFrame.from_records(corpus).fillna(0).astype(int).T
 
-#%% TF-IDF
-#lexicon is used to compare which words exist in other lexicons
-
-#doc.train_test_split(validation=20,test=30)
-
-doc.train_test_split(validation=50,test=50)
-doc.train.make_lexicon()
-doc.train.make_tfidf()
-
-
-
-#%% DBSCAN
 '''
+#%% DBSCAN
 epsilons=[0.1:0.1:1]
 clustering = DBSCAN(eps=3, min_samples=50).fit(doc.train.tfidf.todense())
 print("number of groups: " + str())
 '''
+
 #%% K-means
+
 #train is in order to name the clusters
 #validation is in order to choose the optimal k by comparing the group assignment by k means
 #clusters_range=[30]
 #for clusters_num in clusters_range:
 
+#%% TF-IDF
+
+doc.train_test_split(validation=50,test=50)
+doc.train.make_lexicon()
+tfidf_model = TfidfVectorizer(min_df=0.0, smooth_idf=True, norm='l1')
+tfidf_trained=tfidf_model.fit(doc.train.get_sentences())
+doc.train.make_tfidf(tfidf_trained)
+doc.test.make_tfidf(tfidf_trained)
+
+
+
 k = 30
-print("clusters number: "+str(k))
-kmeans = KMeans(n_clusters=k, random_state=0).fit(doc.train.tfidf_transform.todense())
-test_predict = kmeans.predict(doc.train.tfidf.transform(doc.test.get_sentences()).todense())
-dict=doc.train.clusters_to_sentences_indexes_dict(kmeans.labels_,k)
-for key in dict.keys():
-    if key in test_predict:
-        temp_list = [i for i,v in enumerate(test_predict) if v == key]
-        print(f'Test sentences in cluster num {key+1}')
-        for j in temp_list:
-            print(f' sentence: {doc.test.get_original_sentences()[j]}')
-    else:
-        print(f'There is not any sentences in {key+1}')
-    print('\n')
-    print(f'Train sentences in cluster num {key+1}')
-    for index in dict[key]:
-        print(doc.train.get_original_sentences()[index])
-    print('\n')
+print(f'Clusters number = {k}\n')
+kmeans_tfidf_model = KMeans(n_clusters=k, random_state=0).fit(doc.train.tfidf)
+kmeans_tfidf_predict = kmeans_tfidf_model.predict(doc.test.tfidf)
+tfidf_clusters_dict=doc.train.clusters_to_sentences_indexes_dict(kmeans_tfidf_model.labels_,k)
+print_sentences_by_clusters(tfidf_clusters_dict,kmeans_tfidf_predict)
 
 
 #%% Word2Vec
@@ -272,62 +273,25 @@ word2vec_model = Word2Vec(min_count=0,
                           min_alpha=0.0007,
                           workers=1)
 
-temp_list = [sent.get_one_gram_tokens() for sent in doc.train.sentences]
-word2vec_model.build_vocab(temp_list)
-word2vec_model.train(temp_list,total_examples=word2vec_model.corpus_count,epochs=30)
+train_tokens = doc.train.get_sentences_tokens()
+word2vec_model.build_vocab(train_tokens)
+word2vec_model.train(train_tokens,total_examples=word2vec_model.corpus_count,epochs=30)
 #word2vec_model.save("word2vec.model")
 
 word2vec_model = Word2Vec.load("word2vec.model")
 
+for hyperparameter_lambda in [0,0.5,1]:
 
+    doc.train.make_word2vec(word2vec_model,hyperparameter_lambda)
+    doc.validation.make_word2vec(word2vec_model,hyperparameter_lambda)
 
-tokens = [sent.get_one_gram_tokens() for sent in doc.train.sentences]
-tokens_val = [sent.get_one_gram_tokens() for sent in doc.validation.sentences]
+    print(f'Clusters number = {k}, lambda = {hyperparameter_lambda}\n')
+    kmeans_word2vec_model = KMeans(n_clusters=k, random_state=0).fit(doc.train.word2vec)
+    kmeans_word2vec_predict = kmeans_word2vec_model.predict(doc.validation.word2vec)
+    word2vec_clusters_dict=doc.train.clusters_to_sentences_indexes_dict(kmeans_word2vec_model.labels_,k)
+    print_sentences_by_clusters(word2vec_clusters_dict, kmeans_word2vec_predict)
 
-#### Our own Word 2 Vec
-
-
-# For lambda = 1
-
-
-newl = list()
-for i,v in enumerate(tokens):
-    a = np.zeros(300)
-    for j in v:
-        a += word2vec_model.wv[j]
-    newl.append(a)
-
-
-
-
-newl_val = list()
-for i,v in enumerate(tokens_val):
-    a = np.zeros(300)
-    for j in v:
-        a += word2vec_model.wv[j]
-    newl_val.append(a)
-
-
-k = 30
-print("clusters number: "+str(k))
-kmeans = KMeans(n_clusters=k, random_state=0).fit(newl)
-test_predict = kmeans.predict(newl_val)
-dict=doc.train.clusters_to_sentences_indexes_dict(kmeans.labels_,k)
-for key in dict.keys():
-    if key in test_predict:
-        temp_list = [i for i,v in enumerate(test_predict) if v == key]
-        print(f'Test sentences in cluster num {key+1}')
-        for j in temp_list:
-            print(f' sentence: {doc.test.get_original_sentences()[j]}')
-    else:
-        print(f'There is not any sentences in {key+1}')
-    print('\n')
-    print(f'Train sentences in cluster num {key+1}')
-    for index in dict[key]:
-        print(doc.train.get_original_sentences()[index])
-    print('\n')
-
-
+'''
 #### PubMed Word 2 Vec
 
 word_vectors = KeyedVectors.load_word2vec_format('../RANZCR/PubMed-w2v.bin', binary=True)
@@ -356,8 +320,9 @@ for i,v in enumerate(doc.validation.get_original_sentences()):
         else:
             a += word_vectors.wv[j]
     newl_val.append(a)
+'''
 
-
+'''
 #%% SVD
 ## maybe change to t-SNE
 U, s, Vt = np.linalg.svd(tfs_dataframe.T)
@@ -376,11 +341,10 @@ np.array(err).round(2)
 ts = ts.cumsum()
 ts.plot()
 plt.show()
+'''
 
-
-
-#%% TF-IDF Manual
 """
+#%% TF-IDF Manual
 document_tfidf_vectors = []
 for sent in sentences:
     vec = copy.copy(zero_vector)
@@ -405,6 +369,7 @@ for i, n in enumerate(document_tfidf_vectors):
     corpus['sent' + str(i)] = n
 df = pd.DataFrame.from_records(corpus).T
 """
+
 #%%
 #sentences = [re.split(r'[-\s.,;!?]+', i) for i in temp_sentences]
 #for i, token in enumerate(sentences):
