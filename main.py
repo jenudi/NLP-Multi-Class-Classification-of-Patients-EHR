@@ -252,6 +252,8 @@ k = 30
 
 kmeans_tfidf_model = KMeans(n_clusters=k, random_state=0).fit(doc.train.tfidf)
 
+tfidf_centroids=kmeans_tfidf_model.cluster_centers_
+
 doc.train.tfidf_clusters_labels=kmeans_tfidf_model.labels_
 
 doc.validation.tfidf_clusters_labels = kmeans_tfidf_model.predict(doc.validation.tfidf)
@@ -259,6 +261,7 @@ doc.validation.tfidf_clusters_labels = kmeans_tfidf_model.predict(doc.validation
 doc.test.tfidf_clusters_labels=kmeans_tfidf_model.predict(doc.test.tfidf)
 
 tfidf_clusters_dict=doc.train.clusters_to_sentences_indexes_dict(doc.train.tfidf_clusters_labels,k)
+
 
 if __name__=="__main__":
     print(f'Clusters number = {k}\n')
@@ -292,6 +295,7 @@ word2vec_model.train(train_tokens,total_examples=word2vec_model.corpus_count,epo
 #word2vec_model.save("word2vec.model")
 
 word2vec_model = Word2Vec.load("word2vec.model")
+word2vec_centroids = dict()
 
 for hyperparameter_lambda in [0,0.5,1]:
 
@@ -300,6 +304,8 @@ for hyperparameter_lambda in [0,0.5,1]:
     doc.test.make_word2vec(word2vec_model,hyperparameter_lambda)
 
     kmeans_word2vec_model = KMeans(n_clusters=k, random_state=0).fit(doc.train.word2vec[hyperparameter_lambda])
+
+    word2vec_centroids[hyperparameter_lambda] = kmeans_word2vec_model.cluster_centers_
 
     doc.train.word2vec_clusters_labels[hyperparameter_lambda] = kmeans_word2vec_model.labels_
 
