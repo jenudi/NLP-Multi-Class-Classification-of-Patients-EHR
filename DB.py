@@ -1,6 +1,6 @@
 from bson.son import SON
 from pymongo import MongoClient
-from main import doc,chosen_lambda, k, tfidf_centroids, word2vec_centroids
+from main import doc, tfidf_centroids, word2vec_centroids,chosen_lambda, k
 
 if __name__ == "__main__":
 
