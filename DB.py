@@ -17,7 +17,7 @@ if __name__ == "__main__":
 
         word2vec_clusters_list.append(SON({"cluster number": cluster_number+1,
                                       "sentences ids": list(),
-                                      "centroid": tfidf_centroids[cluster_number]
+                                      "centroid": word2vec_centroids[cluster_number]
                                       }))
 
     sentence_id=0
