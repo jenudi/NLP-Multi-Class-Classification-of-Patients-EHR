@@ -10,15 +10,15 @@ if __name__ == "__main__":
 
     for cluster_number in range(k):
 
-        tfidf_clusters_list.append(SON({"cluster number": cluster_number+1,
-                                   "sentences ids":list(),
-                                   "centroid":tfidf_centroids[cluster_number]
-                                   }))
+        tfidf_clusters_list.append(SON({"_id": cluster_number+1,
+                                        "sentences in cluster":list(),
+                                        "centroid":list(map(float,tfidf_centroids[cluster_number]))
+                                        }))
 
-        word2vec_clusters_list.append(SON({"cluster number": cluster_number+1,
-                                      "sentences ids": list(),
-                                      "centroid": word2vec_centroids[cluster_number]
-                                      }))
+        word2vec_clusters_list.append(SON({"_id": cluster_number+1,
+                                            "sentences in cluster": list(),
+                                            "centroid": list(map(float,word2vec_centroids[chosen_lambda][cluster_number]))
+                                            }))
 
     sentence_id=0
 
@@ -26,16 +26,18 @@ if __name__ == "__main__":
         for index,sentence in enumerate(set.sentences):
 
             sentence_id+=1
+            sentence_tfidf_cluster=set.tfidf_clusters_labels[index]
+            sentence_word2vec_cluster=set.word2vec_clusters_labels[chosen_lambda][index]
 
-            tfidf_clusters_list[set.tfidf_clusters_labels[index]-1]["sentences ids"].append(int(set.tfidf_clusters_labels[index]))
-            word2vec_clusters_list[set.word2vec_clusters_labels[chosen_lambda][index]-1]["sentences ids"].append(int(set.word2vec_clusters_labels[chosen_lambda][index]))
+            tfidf_clusters_list[sentence_tfidf_cluster-1]["sentences in cluster"].append(sentence_id)
+            word2vec_clusters_list[sentence_word2vec_cluster-1]["sentences in cluster"].append(sentence_id)
 
             new_sentence_document=SON({
                 "_id": sentence_id,
                 "original text": sentence.original_text,
                 "tf-idf representetion": list(map(float,set.tfidf[index].tolist()[:][0])),
                 "word2vec representetion": list(map(float,set.word2vec[chosen_lambda][index].tolist())),
-            })
+                })
 
             sentences_list.append(new_sentence_document)
 
