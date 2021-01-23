@@ -1,6 +1,6 @@
 from bson.son import SON
 from pymongo import MongoClient
-from main import doc, tfidf_centroids, word2vec_centroids,chosen_lambda, k
+from main import doc, tfidf_centroids, word2vec_centroids, chosen_lambda, k
 
 if __name__ == "__main__":
 
@@ -11,8 +11,8 @@ if __name__ == "__main__":
     for cluster_number in range(k):
 
         tfidf_clusters_list.append(SON({"_id": cluster_number+1,
-                                        "sentences in cluster":list(),
-                                        "centroid":list(map(float,tfidf_centroids[cluster_number]))
+                                        "sentences in cluster": list(),
+                                        "centroid": list(map(float,tfidf_centroids[cluster_number]))
                                         }))
 
         word2vec_clusters_list.append(SON({"_id": cluster_number+1,
