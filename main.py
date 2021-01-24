@@ -112,7 +112,9 @@ class document_set:
         self.tfidf = list()
         self.tfidf_clusters_labels=list()
         self.word2vec = dict()
+        self.word2vec_pubmed = dict()
         self.word2vec_clusters_labels = dict()
+        self.word2vec_pubmed_clusters_labels = dict()
 
     def get_sentences(self):
         return [sentence.text for sentence in self.sentences]
@@ -121,12 +123,15 @@ class document_set:
         return [sentence.original_text for sentence in self.sentences]
 
     def get_sentences_tokens(self):
-        return [sentence.one_gram_tokens for sentence in self.sentences]
+        return [sentence.tokens for sentence in self.sentences]
+
+    def get_original_text_sentences_tokens(self):
+        return [sentence.original_text_tokens for sentence in self.sentences]
 
     def make_lexicon(self):
         doc_tokens=list()
         for sentence in self.sentences:
-            doc_tokens += [sorted(sentence.one_gram_tokens)]
+            doc_tokens += [sorted(sentence.tokens)]
         self.lexicon = sorted(set(sum(doc_tokens, [])))
 
     def get_zero_vector(self):
@@ -135,13 +140,21 @@ class document_set:
     def make_tfidf(self,model):
         self.tfidf = model.transform(self.get_sentences()).todense()
 
-    def make_word2vec(self,word2vec_model,hyperparameter_lambda):
-        self.word2vec[hyperparameter_lambda]=list()
+    def make_word2vec(self,word2vec_model,hyperparameter_lambda,hyperparameter_window_size):
+        self.word2vec[(hyperparameter_lambda,hyperparameter_window_size)]=list()
         for sentence_tokens in self.get_sentences_tokens():
             word_embeddings= np.array([word2vec_model.wv[token] for token in sentence_tokens])
             word_embeddings_with_lambda=np.mean(word_embeddings,axis=0)*(len(word_embeddings)**hyperparameter_lambda)
             word_embeddings_with_lambda_normalised=word_embeddings_with_lambda/np.linalg.norm(word_embeddings_with_lambda)
-            self.word2vec[hyperparameter_lambda].append(word_embeddings_with_lambda_normalised)
+            self.word2vec[(hyperparameter_lambda,hyperparameter_window_size)].append(word_embeddings_with_lambda_normalised)
+
+    def make_word2vec_pubmed(self,word2vec_pubmed_model,hyperparameter_lambda):
+        self.word2vec_pubmed[hyperparameter_lambda]=list()
+        for sentence_tokens in self.get_original_text_sentences_tokens():
+            word_embeddings= np.array([word2vec_model.wv[token] if token in word2vec_pubmed_model.vocab.keys() else np.zeros(200) for token in sentence_tokens])
+            word_embeddings_with_lambda=np.mean(word_embeddings,axis=0)*(len(word_embeddings)**hyperparameter_lambda)
+            word_embeddings_with_lambda_normalised=word_embeddings_with_lambda/np.linalg.norm(word_embeddings_with_lambda)
+            self.word2vec_pubmed[hyperparameter_lambda].append(word_embeddings_with_lambda_normalised)
 
     def clusters_to_sentences_indexes_dict(self,clusters,num_of_clusters):
         clusters_sentences_indexes_dict=dict()
@@ -156,13 +169,17 @@ class sentence_in_document:
     def __init__(self,text):
         self.text=text
         self.original_text=text
-        self.one_gram_tokens=list()
+        self.tokens=list()
+        self.original_text_tokens=list()
 
     def stem_and_check_stop(self,stopword_set):
         self.text = ' '.join([stemmer.stem(w) for w in self.text.split() if w not in stopword_set])
 
-    def make_one_gram_tokens(self):
-        self.one_gram_tokens = re.split(r'[-\s.,;!?]+', self.text)[:-1]
+    def make_tokens(self):
+        self.tokens = re.split(r'[-\s.,;!?]+', self.text)[:-1]
+
+    def make_original_text_tokens(self):
+        self.original_text_tokens = re.split(r'[-\s.,;!?]+', self.original_text)[:-1]
 
 
 def print_sentences_by_clusters(clusters_dict, test_predict):
@@ -174,8 +191,12 @@ def print_sentences_by_clusters(clusters_dict, test_predict):
                 print(doc.test.get_original_sentences()[sentence_index])
             print('\n')
             print(f'Train sentences in cluster number {key + 1}')
+            sentences_printed=0
             for index in clusters_dict[key]:
                 print(doc.train.get_original_sentences()[index])
+                sentences_printed+=1
+                if sentences_printed==16:
+                    break
             print('\n')
 
 
@@ -215,27 +236,10 @@ doc.make_sentences('\n ')
 
 for sentence in doc.sentences:
     sentence.stem_and_check_stop(stopword_set)
-    sentence.make_one_gram_tokens()
-    sentence.text=' '.join(sentence.one_gram_tokens)
+    sentence.make_tokens()
+    sentence.make_original_text_tokens()
+    sentence.text=' '.join(sentence.tokens)
 
-#corpus = {}
-#for i, sentence in enumerate(tokens):
-#    corpus['sent' + str(i)] = Counter(sentence)
-#df = pd.DataFrame.from_records(corpus).fillna(0).astype(int).T
-
-'''
-#%% DBSCAN
-epsilons=[0.1:0.1:1]
-clustering = DBSCAN(eps=3, min_samples=50).fit(doc.train.tfidf.todense())
-print("number of groups: " + str())
-'''
-
-#%% K-means
-
-#train is in order to name the clusters
-#validation is in order to choose the optimal k by comparing the group assignment by k means
-#clusters_range=[30]
-#for clusters_num in clusters_range:
 
 #%% TF-IDF
 
@@ -274,133 +278,73 @@ if __name__=="__main__":
 
 # After the training one should load the saved model, so the following code should not executed again:
 
-word2vec_model = Word2Vec(min_count=0,
-                          window=5,
-                          size=300,
-                          sample=1e-3,
-                          alpha=0.03,
-                          min_alpha=0.0007,
-                          workers=1)
 
 train_tokens = doc.train.get_sentences_tokens()
-word2vec_model.build_vocab(train_tokens)
-word2vec_model.train(train_tokens,total_examples=word2vec_model.corpus_count,epochs=30)
+
 #word2vec_model.save("word2vec.model")
 
 word2vec_model = Word2Vec.load("word2vec.model")
+
+#word_vectors = KeyedVectors.load_word2vec_format('../RANZCR/PubMed-w2v.bin', binary=True)
+#word_vectors.save("word2vec_pubmed.model")
+
 word2vec_centroids = dict()
 
-for hyperparameter_lambda in [0,0.5,1]:
+for hyperp_lambda in [0,0.5,1]:
+    for hyperp_window_size in [3, 5]:
 
-    doc.train.make_word2vec(word2vec_model,hyperparameter_lambda)
-    doc.validation.make_word2vec(word2vec_model,hyperparameter_lambda)
-    doc.test.make_word2vec(word2vec_model,hyperparameter_lambda)
+        word2vec_model = Word2Vec(min_count=0,
+                                  window=hyperp_window_size,
+                                  size=300,
+                                  sample=1e-3,
+                                  alpha=0.03,
+                                  min_alpha=0.0007,
+                                  workers=1)
 
-    kmeans_word2vec_model = KMeans(n_clusters=k, random_state=0).fit(doc.train.word2vec[hyperparameter_lambda])
-    word2vec_centroids[hyperparameter_lambda] = kmeans_word2vec_model.cluster_centers_
-    doc.train.word2vec_clusters_labels[hyperparameter_lambda] = kmeans_word2vec_model.labels_
-    doc.validation.word2vec_clusters_labels[hyperparameter_lambda] = kmeans_word2vec_model.predict(doc.validation.word2vec[hyperparameter_lambda])
-    doc.test.word2vec_clusters_labels[hyperparameter_lambda] = kmeans_word2vec_model.predict(doc.test.word2vec[hyperparameter_lambda])
-    word2vec_clusters_dict=doc.train.clusters_to_sentences_indexes_dict(doc.train.word2vec_clusters_labels[hyperparameter_lambda],k)
+        word2vec_model.build_vocab(train_tokens)
+        word2vec_model.train(train_tokens, total_examples=word2vec_model.corpus_count, epochs=30)
+
+        doc.train.make_word2vec(word2vec_model,hyperp_lambda,hyperp_window_size)
+        doc.validation.make_word2vec(word2vec_model,hyperp_lambda,hyperp_window_size)
+        doc.test.make_word2vec(word2vec_model,hyperp_lambda,hyperp_window_size)
+
+        kmeans_word2vec_model = KMeans(n_clusters=k, random_state=0).fit(doc.train.word2vec[(hyperp_lambda,hyperp_window_size)])
+
+        word2vec_centroids[(hyperp_lambda,hyperp_window_size)] = kmeans_word2vec_model.cluster_centers_
+
+        doc.train.word2vec_clusters_labels[(hyperp_lambda,hyperp_window_size)] = kmeans_word2vec_model.labels_
+        doc.validation.word2vec_clusters_labels[(hyperp_lambda,hyperp_window_size)] = kmeans_word2vec_model.predict(doc.validation.word2vec[(hyperp_lambda,hyperp_window_size)])
+        doc.test.word2vec_clusters_labels[(hyperp_lambda,hyperp_window_size)] = kmeans_word2vec_model.predict(doc.test.word2vec[(hyperp_lambda,hyperp_window_size)])
+
+        word2vec_clusters_dict=doc.train.clusters_to_sentences_indexes_dict(doc.train.word2vec_clusters_labels[(hyperp_lambda,hyperp_window_size)],k)
+
+        if __name__ == "__main__":
+            print(f'Clusters number = {k}, lambda = {hyperp_lambda}, window size = {hyperp_window_size} \n')
+            print_sentences_by_clusters(word2vec_clusters_dict, doc.validation.word2vec_clusters_labels[(hyperp_lambda,hyperp_window_size)])
+
+
+#### PubMed Word2vec
+
+word2vec_pubmed_model = Word2Vec.load("word2vec_pubmed.model")
+
+word2vec_pubmed_centroids = dict()
+
+for hyperp_lambda in [0,0.5,1]:
+
+    doc.train.make_word2vec_pubmed(word2vec_pubmed_model, hyperp_lambda)
+    doc.validation.make_word2vec_pubmed(word2vec_pubmed_model, hyperp_lambda)
+    doc.test.make_word2vec_pubmed(word2vec_pubmed_model, hyperp_lambda)
+
+    kmeans_word2vec_pubmed_model = KMeans(n_clusters=k, random_state=0).fit(doc.train.word2vec_pubmed[hyperp_lambda])
+
+    word2vec_pubmed_centroids[hyperp_lambda] = kmeans_word2vec_pubmed_model.cluster_centers_
+
+    doc.train.word2vec_pubmed_clusters_labels[hyperp_lambda] = kmeans_word2vec_pubmed_model.labels_
+    doc.validation.word2vec_pubmed_clusters_labels[hyperp_lambda] = kmeans_word2vec_pubmed_model.predict(doc.validation.word2vec_pubmed[hyperp_lambda])
+    doc.test.word2vec_pubmed_clusters_labels[hyperp_lambda] = kmeans_word2vec_pubmed_model.predict(doc.test.word2vec_pubmed[hyperp_lambda])
+
+    word2vec_pubmed_clusters_dict = doc.train.clusters_to_sentences_indexes_dict(doc.train.word2vec_pubmed_clusters_labels[hyperp_lambda], k)
 
     if __name__ == "__main__":
-        print(f'Clusters number = {k}, lambda = {hyperparameter_lambda}\n')
-        print_sentences_by_clusters(word2vec_clusters_dict, doc.validation.tfidf_clusters_labels)
-
-chosen_lambda=1
-
-'''
-#### PubMed Word 2 Vec
-
-word_vectors = KeyedVectors.load_word2vec_format('../RANZCR/PubMed-w2v.bin', binary=True)
-#word_vectors.save("word2vec_pubmed.model")
-word_vectors = Word2Vec.load("word2vec_pubmed.model")
-
-
-sent_train = doc.train.get_original_sentences()
-
-newl = list()
-for i,v in enumerate(doc.train.get_original_sentences()):
-    a = np.zeros(200)
-    for j in v.split():
-        if j not in word_vectors.vocab.keys():
-            a += np.zeros(200)
-        else:
-            a += word_vectors.wv[j]
-    newl.append(a)
-
-newl_val = list()
-for i,v in enumerate(doc.validation.get_original_sentences()):
-    a = np.zeros(200)
-    for j in v.split():
-        if j not in word_vectors.vocab.keys():
-            a += np.zeros(200)
-        else:
-            a += word_vectors.wv[j]
-    newl_val.append(a)
-'''
-
-'''
-#%% SVD
-## maybe change to t-SNE
-U, s, Vt = np.linalg.svd(tfs_dataframe.T)
-S = np.zeros((len(U), len(Vt)))
-pd.np.fill_diagonal(S, s)
-pd.DataFrame(S).round(1)
-
-#%% SVD err
-err = []
-for numdim in range(len(s), 0, -1):
-    S[numdim - 1, numdim - 1] = 0
-    tfs_dataframe_reconstructed = U.dot(S).dot(Vt)
-    err.append(np.sqrt(((tfs_dataframe_reconstructed - tfs_dataframe.T).values.flatten() ** 2).sum() / np.product(tfs_dataframe.T.shape)))
-np.array(err).round(2)
-
-ts = ts.cumsum()
-ts.plot()
-plt.show()
-'''
-
-"""
-#%% TF-IDF Manual
-document_tfidf_vectors = []
-for sent in sentences:
-    vec = copy.copy(zero_vector)
-    tokens = sent
-    token_counts = Counter(tokens)
-    for key, value in token_counts.items():
-        sents_containing_key = 0
-        for _sent in sentences:
-            if key in  _sent:
-                sents_containing_key += 1
-        tf = value / len(lexicon)
-        if sents_containing_key:
-            #idf = len(sentences) / sents_containing_key
-            idf = (1+np.log((1+len(sentences)) / (1+sents_containing_key)))
-        else:
-            idf = 0
-        vec[key] = tf * idf
-    document_tfidf_vectors.append(vec)
-
-corpus = {}
-for i, n in enumerate(document_tfidf_vectors):
-    corpus['sent' + str(i)] = n
-df = pd.DataFrame.from_records(corpus).T
-"""
-
-#%%
-#sentences = [re.split(r'[-\s.,;!?]+', i) for i in temp_sentences]
-#for i, token in enumerate(sentences):
- #  sentences[i] = [w for w in token if not w in stopword_set]
-
-#%% n-grams
-# One
-#sentences = [re.split(r'[-\s.,;!?]+', i) for i in temp_sentences]
-
-#corpus = {}
-#for i, sentence in enumerate(sentences):
- #   corpus['sent' + str(i)] = dict((token, 1) for token in sentence)
-#df = pd.DataFrame.from_records(corpus).fillna(0).astype(int).T
-
-# Two-grams
-#tokens_two = list(ngrams(i, 2) for i in sentences)
+        print(f'Clusters number = {k}, lambda = {hyperp_lambda} \n')
+        print_sentences_by_clusters(word2vec_pubmed_clusters_dict, doc.validation.word2vec_pubmed_clusters_labels[hyperp_lambda])
