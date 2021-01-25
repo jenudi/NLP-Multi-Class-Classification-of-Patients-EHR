@@ -195,7 +195,7 @@ def print_sentences_by_clusters(clusters_dict, test_predict):
             for index in clusters_dict[key]:
                 print(doc.train.get_original_sentences()[index])
                 sentences_printed+=1
-                if sentences_printed==16:
+                if sentences_printed>15:
                     break
             print('\n')
 
@@ -255,9 +255,11 @@ k = 30
 
 kmeans_tfidf_model = KMeans(n_clusters=k, random_state=0).fit(doc.train.tfidf)
 tfidf_centroids=kmeans_tfidf_model.cluster_centers_
+
 doc.train.tfidf_clusters_labels=kmeans_tfidf_model.labels_
 doc.validation.tfidf_clusters_labels = kmeans_tfidf_model.predict(doc.validation.tfidf)
 doc.test.tfidf_clusters_labels=kmeans_tfidf_model.predict(doc.test.tfidf)
+
 tfidf_clusters_dict=doc.train.clusters_to_sentences_indexes_dict(doc.train.tfidf_clusters_labels,k)
 
 if __name__=="__main__":
