@@ -98,3 +98,23 @@ for i,v in enumerate(doc.validation.get_original_sentences()):
             a += word_vectors.wv[j]
     newl_val.append(a)
 '''
+#if some words in our lexicon dont exist in words2vec lexicon change them to 'unknown' token
+#check how to determine number of features
+
+# Word2Vec Hyper-parameters:
+# 1.Number of tokens
+# 2. alpha - learning rate
+# 3. window
+# 4. Size of vector
+# 5. Compare it to other models
+
+# After the training one should load the saved model, so the following code should not executed again:
+
+#word2vec_model.save("word2vec.model")
+
+#word2vec_model = Word2Vec.load("word2vec.model")
+
+#word_vectors = KeyedVectors.load_word2vec_format('../RANZCR/PubMed-w2v.bin', binary=True)
+#word_vectors.save("word2vec_pubmed.model")
+
+#word2vec_model = Word2Vec.load("word2vec.model")
