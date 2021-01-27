@@ -21,8 +21,8 @@ class ProArgs:
         self.k = k
         self.min = min
         self.random = random
-        self.window = [3, 5]
-        self.hyperp_lambda = [0, 0.5, 1]
+        self.windows = [3, 5]
+        self.hyperp_lambdas = [0, 0.5, 1]
         self.vec_size = vec_size
         self.doc = None
 
@@ -50,7 +50,7 @@ def print_sentences_by_clusters(args, clusters_dict, test_predict):
 
 
 # %% TF-IDF
-def tf_idf_model(args):
+def run_tfidf_model(args):
     tfidf_model = TfidfVectorizer(min_df=args.min,
                                   smooth_idf=True,
                                   norm='l1')
@@ -63,32 +63,30 @@ def tf_idf_model(args):
     kmeans_tfidf_model = KMeans(n_clusters=args.k,
                                 random_state=args.random).fit(args.doc.train.tfidf)
 
-    tfidf_centroids = kmeans_tfidf_model.cluster_centers_
-
     args.doc.train.tfidf_clusters_labels = kmeans_tfidf_model.labels_
     args.doc.validation.tfidf_clusters_labels = kmeans_tfidf_model.predict(args.doc.validation.tfidf)
     args.doc.test.tfidf_clusters_labels = kmeans_tfidf_model.predict(args.doc.test.tfidf)
 
     tfidf_clusters_dict = args.doc.train.clusters_to_sentences_indexes_dict(args.doc.train.tfidf_clusters_labels,
                                                                             args.k)
-    print(f'Clusters number = {args.k}\n')
-    print_sentences_by_clusters(args,tfidf_clusters_dict,
-                                args.doc.test.tfidf_clusters_labels)
+    if __name__ == "__main__":
+
+        print(f'Clusters number = {args.k}\n')
+        print_sentences_by_clusters(args,tfidf_clusters_dict,
+                                    args.doc.test.tfidf_clusters_labels)
+
+    return kmeans_tfidf_model.cluster_centers_
 
 
-# %%
-
-if __name__ == "__main__":
-    tf_idf_model(args)
 
 
 # %% Word2Vec
-def word2vec(args):
+def run_word2vec_model(args):
     train_tokens = args.doc.train.get_sentences_tokens()
     train_tokens.append(['un-known'])
     word2vec_centroids = dict()
 
-    for window in args.window:
+    for window in args.windows:
         word2vec_model = Word2Vec(min_count=args.min,
                                   window=window,
                                   size=args.vec_size,
@@ -101,7 +99,7 @@ def word2vec(args):
                              total_examples=word2vec_model.corpus_count,
                              epochs=30)
 
-        for hyperp_lambda in args.hyperp_lambda:
+        for hyperp_lambda in args.hyperp_lambdas:
 
             args.doc.train.make_word2vec(word2vec_model, hyperp_lambda, window)
             args.doc.validation.make_word2vec(word2vec_model, hyperp_lambda, window)
@@ -122,20 +120,16 @@ def word2vec(args):
 
             word2vec_clusters_dict = args.doc.train.clusters_to_sentences_indexes_dict(
                 args.doc.train.word2vec_clusters_labels[(hyperp_lambda, window)], args.k)
-            print(f'Clusters number = {args.k}, lambda = {hyperp_lambda}, window size = {window} \n')
-            print_sentences_by_clusters(args, word2vec_clusters_dict,
-                                        args.doc.validation.word2vec_clusters_labels[(hyperp_lambda, window)])
+
+            if __name__ == "__main__":
+                print(f'Clusters number = {args.k}, lambda = {hyperp_lambda}, window size = {window} \n')
+                print_sentences_by_clusters(args, word2vec_clusters_dict,
+                                            args.doc.validation.word2vec_clusters_labels[(hyperp_lambda, window)])
+
+    return word2vec_centroids
 
 
-#%%
-
-if __name__ == "__main__":
-    word2vec(args)
-
-
-#%% PubMed Word2vec
-
-def word2vec_pubmed(args):
+def run_word2vec_pubmed_model(args):
 
     try:
         word2vec_pubmed_model = Word2Vec.load("word2vec_pubmed.model")
@@ -145,7 +139,7 @@ def word2vec_pubmed(args):
 
     word2vec_pubmed_centroids = dict()
 
-    for hyperp_lambda in args.hyperp_lambda:
+    for hyperp_lambda in args.hyperp_lambdas:
 
         args.doc.train.make_word2vec_pubmed(word2vec_pubmed_model, hyperp_lambda)
         args.doc.validation.make_word2vec_pubmed(word2vec_pubmed_model, hyperp_lambda)
@@ -163,10 +157,15 @@ def word2vec_pubmed(args):
 
         word2vec_pubmed_clusters_dict = args.doc.train.clusters_to_sentences_indexes_dict(
             args.doc.train.word2vec_pubmed_clusters_labels[hyperp_lambda], args.k)
-        print(f'Clusters number = {args.k}, lambda = {hyperp_lambda} \n')
-        print_sentences_by_clusters(args,word2vec_pubmed_clusters_dict,
-                                    args.doc.validation.word2vec_pubmed_clusters_labels[hyperp_lambda])
+
+        if __name__ == "__main__":
+            print(f'Clusters number = {args.k}, lambda = {hyperp_lambda} \n')
+            print_sentences_by_clusters(args,word2vec_pubmed_clusters_dict,
+                                        args.doc.validation.word2vec_pubmed_clusters_labels[hyperp_lambda])
+    return word2vec_pubmed_centroids
 
 
-if __name__ == "__main__":
-    word2vec_pubmed(args)
+
+tfidf_centroids=run_tfidf_model(args)
+word2vec_centroids=run_word2vec_model(args)
+word2vec_pubmed_centroids=run_word2vec_pubmed_model(args)

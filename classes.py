@@ -12,9 +12,9 @@ class Document:
     def __init__(self,text):
         self.text=text
         self.sentences=list()
-        self.train = document_set(list())
-        self.validation = document_set(list())
-        self.test = document_set(list())
+        self.train = Document_set(list())
+        self.validation = Document_set(list())
+        self.test = Document_set(list())
 
     def do_replaces(self):
         self.text = self.text.replace(r"'s", "  is")
@@ -76,7 +76,7 @@ class Document:
         self.text = self.text.replace(r" sym ", " symptom ")
 
     def make_sentences(self,char):
-        self.sentences = [sentence_in_document(sentence) for sentence in self.text.split(char)]
+        self.sentences = [Sentence_in_document(sentence) for sentence in self.text.split(char)]
 
     def get_sentences(self):
         return [sentence.text for sentence in self.sentences]
@@ -84,12 +84,12 @@ class Document:
     def train_test_split(self, validation=20,test=30):
         random.shuffle(self.sentences)
         train_len = len(self.sentences)-(validation+test)
-        self.train = document_set(self.sentences[0:train_len])
-        self.validation = document_set(self.sentences[train_len:train_len+validation])
-        self.test = document_set(self.sentences[train_len+validation:])
+        self.train = Document_set(self.sentences[0:train_len])
+        self.validation = Document_set(self.sentences[train_len:train_len+validation])
+        self.test = Document_set(self.sentences[train_len+validation:])
 
 
-class document_set:
+class Document_set:
 
     def __init__(self, sentences):
         self.sentences = sentences
@@ -149,7 +149,7 @@ class document_set:
         return clusters_sentences_indexes_dict
 
 
-class sentence_in_document:
+class Sentence_in_document:
 
     def __init__(self,text):
         self.text=text
@@ -208,4 +208,3 @@ def init_classes():
     document.train.make_lexicon()
     print('Classes are ready to use..')
     return document
-
