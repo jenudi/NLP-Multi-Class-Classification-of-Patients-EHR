@@ -128,7 +128,7 @@ class document_set:
     def make_word2vec(self,word2vec_model,hyperparameter_lambda,hyperparameter_window_size):
         self.word2vec[(hyperparameter_lambda,hyperparameter_window_size)]=list()
         for sentence_tokens in self.get_sentences_tokens():
-            word_embeddings= np.array([word2vec_model.wv[token] for token in sentence_tokens])
+            word_embeddings = [word2vec_model.wv[token] if token in word2vec_model.wv.vocab.keys() else word2vec_model.wv['un-known'] for token in sentence_tokens]
             word_embeddings_with_lambda=np.mean(word_embeddings,axis=0)*(len(word_embeddings)**hyperparameter_lambda)
             word_embeddings_with_lambda_normalised=word_embeddings_with_lambda/np.linalg.norm(word_embeddings_with_lambda)
             self.word2vec[(hyperparameter_lambda,hyperparameter_window_size)].append(word_embeddings_with_lambda_normalised)
@@ -136,7 +136,7 @@ class document_set:
     def make_word2vec_pubmed(self,word2vec_pubmed_model,hyperparameter_lambda):
         self.word2vec_pubmed[hyperparameter_lambda]=list()
         for sentence_tokens in self.get_original_text_sentences_tokens():
-            word_embeddings= np.array([word2vec_model.wv[token] if token in word2vec_pubmed_model.vocab.keys() else np.zeros(200) for token in sentence_tokens])
+            word_embeddings= np.array([word2vec_pubmed_model.wv[token] if token in word2vec_pubmed_model.wv.vocab.keys() else word2vec_pubmed_model.wv['un-known'] for token in sentence_tokens])
             word_embeddings_with_lambda=np.mean(word_embeddings,axis=0)*(len(word_embeddings)**hyperparameter_lambda)
             word_embeddings_with_lambda_normalised=word_embeddings_with_lambda/np.linalg.norm(word_embeddings_with_lambda)
             self.word2vec_pubmed[hyperparameter_lambda].append(word_embeddings_with_lambda_normalised)

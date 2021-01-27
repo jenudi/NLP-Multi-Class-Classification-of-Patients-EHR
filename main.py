@@ -85,6 +85,7 @@ if __name__ == "__main__":
 # %% Word2Vec
 def word2vec(args):
     train_tokens = args.doc.train.get_sentences_tokens()
+    train_tokens.append(['un-known'])
     word2vec_centroids = dict()
 
     for window in args.window:
