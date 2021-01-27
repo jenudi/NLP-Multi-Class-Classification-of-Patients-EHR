@@ -12,7 +12,6 @@ from nltk.stem import SnowballStemmer
 from collections import Counter
 import copy
 from nltk.util import ngrams
-import nltk
 
 
 # %% Initialization
