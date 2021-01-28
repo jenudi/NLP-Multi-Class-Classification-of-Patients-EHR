@@ -24,7 +24,6 @@ if __name__ == "__main__":
         args.doc.validation.word2vec=args.doc.validation.word2vec_pubmed
         args.doc.test.word2vec=args.doc.test.word2vec_pubmed
 
-
     sentences_list=list()
     tfidf_clusters_list=list()
     word2vec_clusters_list=list()
