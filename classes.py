@@ -128,8 +128,8 @@ class Document_set:
     def make_word2vec(self,word2vec_model,hyperparameter_lambda,hyperparameter_window_size):
         self.word2vec[(hyperparameter_lambda,hyperparameter_window_size)]=list()
         for sentence_tokens in self.get_sentences_tokens():
-            word_embeddings = np.sum([word2vec_model.wv[token] if token in word2vec_model.wv.vocab.keys()
-                                   else word2vec_model.wv['un-known'] for token in sentence_tokens],axis=0)
+            word_embeddings = np.mean([word2vec_model.wv[token] if token in word2vec_model.wv.vocab.keys()
+                                   else np.zeros(300) for token in sentence_tokens],axis=0)
             word_embeddings *= (len(sentence_tokens) ** hyperparameter_lambda)
             self.word2vec[(hyperparameter_lambda, hyperparameter_window_size)].append(word_embeddings /
                                                                                       np.linalg.norm(word_embeddings))

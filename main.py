@@ -35,11 +35,13 @@ def print_sentences_by_clusters(args, clusters_dict, validation_predict):
     for key in clusters_dict.keys():
         if key in validation_predict:
             validation_sentences_indexes_in_cluster = [index for index, value in enumerate(validation_predict) if value == key]
-            print(f'Validation sentences in cluster number {key + 1}\n')
+            print(f'Validation sentences in cluster number {key + 1}, number of sentences: {len(validation_sentences_indexes_in_cluster)}\n')
             for sentence_index in validation_sentences_indexes_in_cluster:
                 print(args.doc.test.get_original_sentences()[sentence_index])
-            print('\n')
-        print(f'Train sentences in cluster number {key + 1}\n')
+        else:
+            print(f'No validation sentences in cluster number {key + 1}\n')
+        print('\n')
+        print(f'Train sentences in cluster number {key + 1}, size of cluster: {len(clusters_dict[key])} \n')
         sentences_printed = 0
         for index in clusters_dict[key]:
             print(args.doc.train.get_original_sentences()[index])
@@ -84,7 +86,7 @@ def run_tfidf_model(args):
 # %% Word2Vec
 def run_word2vec_model(args):
     train_tokens = args.doc.train.get_sentences_tokens()
-    train_tokens.append(['un-known'])
+    #train_tokens.append(['un-known'])
     word2vec_centroids = dict()
 
     for window in args.windows:
