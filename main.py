@@ -31,22 +31,23 @@ args = ProArgs()
 args.doc = init_classes()
 
 
-def print_sentences_by_clusters(args, clusters_dict, test_predict):
+def print_sentences_by_clusters(args, clusters_dict, validation_predict):
     for key in clusters_dict.keys():
-        if key in test_predict:
-            sentences_indexes_in_cluster = [index for index, value in enumerate(test_predict) if value == key]
+        if key in validation_predict:
+            validation_sentences_indexes_in_cluster = [index for index, value in enumerate(validation_predict) if value == key]
             print(f'Validation sentences in cluster number {key + 1}\n')
-            for sentence_index in sentences_indexes_in_cluster:
+            for sentence_index in validation_sentences_indexes_in_cluster:
                 print(args.doc.test.get_original_sentences()[sentence_index])
             print('\n')
-            print(f'Train sentences in cluster number {key + 1}\n')
-            sentences_printed = 0
-            for index in clusters_dict[key]:
-                print(args.doc.train.get_original_sentences()[index])
-                sentences_printed += 1
-                if sentences_printed > 15:
-                    break
-            print('\n')
+        print(f'Train sentences in cluster number {key + 1}\n')
+        sentences_printed = 0
+        for index in clusters_dict[key]:
+            print(args.doc.train.get_original_sentences()[index])
+            sentences_printed += 1
+            if sentences_printed > 15:
+                break
+        print('\n')
+        print('\n')
 
 
 # %% TF-IDF
@@ -166,9 +167,7 @@ def run_word2vec_pubmed_model(args):
                                         args.doc.validation.word2vec_pubmed_clusters_labels[hyperp_lambda])
     return word2vec_pubmed_centroids
 
-
 #%%
-
 
 #tfidf_centroids=run_tfidf_model(args)
 word2vec_centroids=run_word2vec_model(args)
