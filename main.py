@@ -4,10 +4,10 @@ from classes import *
 from sklearn.feature_extraction.text import TfidfVectorizer
 from gensim.models.word2vec import Word2Vec
 from sklearn.cluster import KMeans
+from gensim.models.keyedvectors import KeyedVectors
 
 import matplotlib.pyplot as plt
 from sklearn.cluster import DBSCAN
-from gensim.models.keyedvectors import KeyedVectors
 from nltk.stem import SnowballStemmer
 from collections import Counter
 import copy
@@ -60,17 +60,15 @@ def run_tfidf_model(args):
 
     tfidf_trained = tfidf_model.fit(args.doc.train.get_sentences())
     args.doc.train.make_tfidf(tfidf_trained)
-    args.doc.validation.make_tfidf(tfidf_trained)
+    #args.doc.validation.make_tfidf(tfidf_trained)
     args.doc.test.make_tfidf(tfidf_trained)
 
     kmeans_tfidf_model = KMeans(n_clusters=args.k,
                                 random_state=args.random).fit(args.doc.train.tfidf)
 
     args.doc.train.tfidf_clusters_labels = kmeans_tfidf_model.labels_
-    args.doc.validation.tfidf_clusters_labels = kmeans_tfidf_model.predict(args.doc.validation.tfidf)
+    #args.doc.validation.tfidf_clusters_labels = kmeans_tfidf_model.predict(args.doc.validation.tfidf)
     args.doc.test.tfidf_clusters_labels = kmeans_tfidf_model.predict(args.doc.test.tfidf)
-
-    # we don't need val and test, only one of them, cuz there is not an hyper para
 
     tfidf_clusters_dict = args.doc.train.clusters_to_sentences_indexes_dict(args.doc.train.tfidf_clusters_labels,
                                                                             args.k)
@@ -137,7 +135,8 @@ def run_word2vec_model(args):
 def run_word2vec_pubmed_model(args):
 
     try:
-        word2vec_pubmed_model = Word2Vec.load("word2vec_pubmed.model")
+        word2vec_pubmed_model = KeyedVectors.load_word2vec_format('PubMed-w2v.bin', binary=True)
+        #word2vec_pubmed_model = Word2Vec.load("word2vec_pubmed.model")
     except FileNotFoundError:
         print('No such model file')
         return
@@ -148,7 +147,7 @@ def run_word2vec_pubmed_model(args):
 
         args.doc.train.make_word2vec_pubmed(word2vec_pubmed_model, hyperp_lambda)
         args.doc.validation.make_word2vec_pubmed(word2vec_pubmed_model, hyperp_lambda)
-        args.doc.test.make_word2vec_pubmed(word2vec_pubmed_model, hyperp_lambda)
+        #args.doc.test.make_word2vec_pubmed(word2vec_pubmed_model, hyperp_lambda)
 
         kmeans_word2vec_pubmed_model = KMeans(n_clusters=args.k, random_state=args.random).fit(args.doc.train.word2vec_pubmed[hyperp_lambda])
 
@@ -157,8 +156,8 @@ def run_word2vec_pubmed_model(args):
         args.doc.train.word2vec_pubmed_clusters_labels[hyperp_lambda] = kmeans_word2vec_pubmed_model.labels_
         args.doc.validation.word2vec_pubmed_clusters_labels[hyperp_lambda] = kmeans_word2vec_pubmed_model.predict(
             args.doc.validation.word2vec_pubmed[hyperp_lambda])
-        args.doc.test.word2vec_pubmed_clusters_labels[hyperp_lambda] = kmeans_word2vec_pubmed_model.predict(
-            args.doc.test.word2vec_pubmed[hyperp_lambda])
+        #args.doc.test.word2vec_pubmed_clusters_labels[hyperp_lambda] = kmeans_word2vec_pubmed_model.predict(
+         #   args.doc.test.word2vec_pubmed[hyperp_lambda])
 
         word2vec_pubmed_clusters_dict = args.doc.train.clusters_to_sentences_indexes_dict(
             args.doc.train.word2vec_pubmed_clusters_labels[hyperp_lambda], args.k)
@@ -172,8 +171,8 @@ def run_word2vec_pubmed_model(args):
 #%%
 
 #tfidf_centroids=run_tfidf_model(args)
-word2vec_centroids=run_word2vec_model(args)
-#word2vec_pubmed_centroids=run_word2vec_pubmed_model(args)
+#word2vec_centroids=run_word2vec_model(args)
+word2vec_pubmed_centroids=run_word2vec_pubmed_model(args)
 
 
 

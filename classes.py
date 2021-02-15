@@ -142,10 +142,15 @@ class Document_set:
     def make_word2vec_pubmed(self,word2vec_pubmed_model,hyperparameter_lambda):
         self.word2vec_pubmed[hyperparameter_lambda]=list()
         for sentence_tokens in self.get_original_text_sentences_tokens():
-            word_embeddings= np.array([word2vec_pubmed_model.wv[token] if token in word2vec_pubmed_model.wv.vocab.keys() else word2vec_pubmed_model.wv['un-known'] for token in sentence_tokens])
-            word_embeddings_with_lambda=np.mean(word_embeddings,axis=0)*(len(word_embeddings)**hyperparameter_lambda)
-            word_embeddings_with_lambda_normalised=word_embeddings_with_lambda/np.linalg.norm(word_embeddings_with_lambda)
-            self.word2vec_pubmed[hyperparameter_lambda].append(word_embeddings_with_lambda_normalised)
+            word_embeddings = np.mean([word2vec_pubmed_model.wv[token] if token in word2vec_pubmed_model.wv.vocab.keys()
+                                       else np.zeros(200) for token in sentence_tokens], axis=0)
+            word_embeddings *= (len(sentence_tokens) ** hyperparameter_lambda)
+            self.word2vec_pubmed[hyperparameter_lambda].append(word_embeddings / np.linalg.norm(word_embeddings))
+
+            #word_embeddings= np.array([word2vec_pubmed_model.wv[token] if token in word2vec_pubmed_model.wv.vocab.keys() else word2vec_pubmed_model.wv['un-known'] for token in sentence_tokens])
+            #word_embeddings_with_lambda=np.mean(word_embeddings,axis=0)*(len(word_embeddings)**hyperparameter_lambda)
+            #word_embeddings_with_lambda_normalised=word_embeddings_with_lambda/np.linalg.norm(word_embeddings_with_lambda)
+            #self.word2vec_pubmed[hyperparameter_lambda].append(word_embeddings_with_lambda_normalised)
 
     def clusters_to_sentences_indexes_dict(self,clusters,num_of_clusters):
         clusters_sentences_indexes_dict=dict()
