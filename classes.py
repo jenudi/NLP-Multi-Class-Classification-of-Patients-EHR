@@ -219,3 +219,5 @@ def init_classes():
     document.train.make_lexicon()
     print('Classes are ready to use..')
     return document
+
+
