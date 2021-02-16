@@ -82,7 +82,7 @@ class Document:
         return [sentence.text for sentence in self.sentences]
 
     def train_test_split(self, validation=20,test=30):
-        random.shuffle(self.sentences)
+        random.Random(4).shuffle(self.sentences)
         train_len = len(self.sentences)-(validation+test)
         self.train = Document_set(self.sentences[0:train_len])
         self.validation = Document_set(self.sentences[train_len:train_len+validation])
@@ -133,12 +133,6 @@ class Document_set:
             word_embeddings *= (len(sentence_tokens) ** hyperparameter_lambda)
             self.word2vec[(hyperparameter_lambda, hyperparameter_window_size)].append(word_embeddings /
                                                                                       np.linalg.norm(word_embeddings))
-            #word_embeddings = np.array([word2vec_model.wv[token] if token in word2vec_model.wv.vocab.keys() else word2vec_model.wv['un-known'] for token in sentence_tokens])
-            #word_embeddings_with_lambda = np.sum(word_embeddings,axis=0)
-            #word_embeddings_with_lambda=np.mean(word_embeddings,axis=1)*(len(word_embeddings)**hyperparameter_lambda)
-            #word_embeddings_with_lambda_normalised=word_embeddings_with_lambda/np.linalg.norm(word_embeddings_with_lambda)
-            #self.word2vec[(hyperparameter_lambda,hyperparameter_window_size)].append(word_embeddings_with_lambda_normalised)
-
     def make_word2vec_pubmed(self,word2vec_pubmed_model,hyperparameter_lambda):
         self.word2vec_pubmed[hyperparameter_lambda]=list()
         for sentence_tokens in self.get_original_text_sentences_tokens():
@@ -146,11 +140,6 @@ class Document_set:
                                        else np.zeros(200) for token in sentence_tokens], axis=0)
             word_embeddings *= (len(sentence_tokens) ** hyperparameter_lambda)
             self.word2vec_pubmed[hyperparameter_lambda].append(word_embeddings / np.linalg.norm(word_embeddings))
-
-            #word_embeddings= np.array([word2vec_pubmed_model.wv[token] if token in word2vec_pubmed_model.wv.vocab.keys() else word2vec_pubmed_model.wv['un-known'] for token in sentence_tokens])
-            #word_embeddings_with_lambda=np.mean(word_embeddings,axis=0)*(len(word_embeddings)**hyperparameter_lambda)
-            #word_embeddings_with_lambda_normalised=word_embeddings_with_lambda/np.linalg.norm(word_embeddings_with_lambda)
-            #self.word2vec_pubmed[hyperparameter_lambda].append(word_embeddings_with_lambda_normalised)
 
     def clusters_to_sentences_indexes_dict(self,clusters,num_of_clusters):
         clusters_sentences_indexes_dict=dict()
@@ -187,19 +176,16 @@ def init_classes():
     lab_results = pd.read_csv("lab_results.csv").rename(str.lower, axis='columns')
     data1 = encounter_data[['encounter_id', 'member_id', 'patient_gender', 'has_appt', 'soap_note']].set_index(
         'encounter_id').sort_index()
-    data2 = encounter_dx.groupby('encounter_id')['code', 'description', 'severity'].apply(
+    data2 = encounter_dx.groupby('encounter_id')[['code', 'description', 'severity']].apply(
         lambda x: list(x.values)).sort_index()
-    data3 = lab_results.groupby('encounter_id')['result_name', 'result_description', 'numeric_result', 'units'].apply(
+    data3 = lab_results.groupby('encounter_id')[['result_name', 'result_description', 'numeric_result', 'units']].apply(
         lambda x: list(x.values)).sort_index()
     data = pd.concat([data1, data2, data3], axis=1)
     data = data.rename(
         columns={0: 'code_description_severity', 1: 'result_name_result-description_numeric-result_units'})
-
     soap = data['soap_note'].dropna().reset_index(drop=True)
     soap_temp = [re.split('o:''|''o :', i) for i in soap]  # split by "o:" or "o :"
     temp_sentences = [i[0].strip().strip('s:').lower() for i in soap_temp]
-
-    print('Pre-procssing the data')
     try:
         _ = stopwords.words("english")
     except LookupError:
@@ -214,10 +200,9 @@ def init_classes():
         sentence.make_tokens()
         sentence.make_original_text_tokens()
         sentence.text = ' '.join(sentence.tokens)
-    print('Splitting the data')
     document.train_test_split(validation=50, test=50)
     document.train.make_lexicon()
-    print('Classes are ready to use..')
+    print('Classes are ready to use.')
     return document
 
 
