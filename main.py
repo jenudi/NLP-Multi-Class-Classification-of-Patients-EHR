@@ -58,7 +58,7 @@ def make_tsne(model, model_name, labels, centers=None, w=None, h=None):
     tsne = TSNE()
     palette = sns.color_palette("icefire", len(set(labels)))
     model_tsne_embedded = tsne.fit_transform(model)
-    sns.scatterplot(model_tsne_embedded[:, 0], model_tsne_embedded[:, 1], legend='full', palette=palette, hue=labels)
+    sns.scatterplot(x=model_tsne_embedded[:, 0], y=model_tsne_embedded[:, 1], legend='full', palette=palette, hue=labels)
     # plt.scatter(centers[:, 0], centers[:, 1], c='black', s=200, alpha=0.5)
     if (w is not None) and (h is not None):
         fig.suptitle(f'Model: {model_name}, Window size: {w}, lambda {h}', fontsize=16)
