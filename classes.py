@@ -13,7 +13,6 @@ class Document:
         self.text=text
         self.sentences=list()
         self.train = Document_set(list())
-        self.validation = Document_set(list())
         self.test = Document_set(list())
 
     def do_replaces(self):
@@ -81,12 +80,11 @@ class Document:
     def get_sentences(self):
         return [sentence.text for sentence in self.sentences]
 
-    def train_test_split(self, validation=20,test=30):
+    def train_test_split(self, test=50):
         random.Random(4).shuffle(self.sentences)
-        train_len = len(self.sentences)-(validation+test)
+        train_len = len(self.sentences)-(test)
         self.train = Document_set(self.sentences[0:train_len])
-        self.validation = Document_set(self.sentences[train_len:train_len+validation])
-        self.test = Document_set(self.sentences[train_len+validation:])
+        self.test = Document_set(self.sentences[train_len:])
 
 
 class Document_set:
@@ -200,7 +198,7 @@ def init_classes():
         sentence.make_tokens()
         sentence.make_original_text_tokens()
         sentence.text = ' '.join(sentence.tokens)
-    document.train_test_split(validation=50, test=50)
+    document.train_test_split(test=50)
     document.train.make_lexicon()
     print('Classes are ready to use.')
     return document

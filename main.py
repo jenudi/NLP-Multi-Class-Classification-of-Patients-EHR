@@ -26,10 +26,6 @@ class NLPargs:
         self.doc = None
 
 
-args = NLPargs()
-args.doc = init_classes()
-
-
 def print_sentences_by_clusters(args, clusters_dict, validation_predict):
     for key in clusters_dict.keys():
         if key in validation_predict:
@@ -53,15 +49,19 @@ def print_sentences_by_clusters(args, clusters_dict, validation_predict):
         print('\n')
 
 
-def make_tsne(model, model_name, labels, centers=None, w=None, h=None):
+def make_tsne(model, model_name, labels, w=None, h=None):
     fig = plt.figure()
     tsne = TSNE()
     palette = sns.color_palette("icefire", len(set(labels)))
     model_tsne_embedded = tsne.fit_transform(model)
+    temp_df = pd.DataFrame({'x1':model_tsne_embedded[:, 0],'x2':model_tsne_embedded[:, 1],'y':labels})
+    centers = temp_df.groupby(by=["y"]).mean()
     sns.scatterplot(x=model_tsne_embedded[:, 0], y=model_tsne_embedded[:, 1], legend='full', palette=palette, hue=labels)
-    # plt.scatter(centers[:, 0], centers[:, 1], c='black', s=200, alpha=0.5)
+    plt.scatter(centers.iloc[:,0].values, centers.iloc[:,1].values, c=palette, s=200, alpha=0.5)
     if (w is not None) and (h is not None):
         fig.suptitle(f'Model: {model_name}, Window size: {w}, lambda {h}', fontsize=16)
+    elif h is not None:
+        fig.suptitle(f'Model: {model_name}, lambda {h}', fontsize=16)
     else:
         fig.suptitle(f'Model: {model_name}', fontsize=16)
     plt.show()
@@ -76,23 +76,19 @@ def run_tfidf_model(args, t_sne=False):
     tfidf_trained = tfidf_model.fit(args.doc.train.get_sentences())
 
     args.doc.train.make_tfidf(tfidf_trained)
-
-    # args.doc.validation.make_tfidf(tfidf_trained)
     args.doc.test.make_tfidf(tfidf_trained)
 
     kmeans_tfidf_model = KMeans(n_clusters=args.k,
                                 random_state=args.random).fit(args.doc.train.tfidf)
 
     args.doc.train.tfidf_clusters_labels = kmeans_tfidf_model.labels_
-    # args.doc.validation.tfidf_clusters_labels = kmeans_tfidf_model.predict(args.doc.validation.tfidf)
     args.doc.test.tfidf_clusters_labels = kmeans_tfidf_model.predict(args.doc.test.tfidf)
 
     tfidf_clusters_dict = args.doc.train.clusters_to_sentences_indexes_dict(args.doc.train.tfidf_clusters_labels,
                                                                             args.k)
     if __name__ == "__main__":
         if t_sne:
-            make_tsne(args.doc.train.tfidf, 'TF-IDF', args.doc.train.tfidf_clusters_labels,
-                      centers=kmeans_tfidf_model.cluster_centers_, w=None, h=None)
+            make_tsne(args.doc.train.tfidf, 'TF-IDF', args.doc.train.tfidf_clusters_labels, w=None, h=None)
         else:
             print(f'Clusters number = {args.k}\n')
             print_sentences_by_clusters(args, tfidf_clusters_dict,
@@ -123,7 +119,6 @@ def run_word2vec_model(args, t_sne=False):
         for hyperp_lambda in args.hyperp_lambdas:
 
             args.doc.train.make_word2vec(word2vec_model, hyperp_lambda, window)
-            # args.doc.validation.make_word2vec(word2vec_model, hyperp_lambda, window)
             args.doc.test.make_word2vec(word2vec_model, hyperp_lambda, window)
 
             kmeans_word2vec_model = KMeans(n_clusters=args.k,
@@ -133,8 +128,6 @@ def run_word2vec_model(args, t_sne=False):
             word2vec_centroids[(hyperp_lambda, window)] = kmeans_word2vec_model.cluster_centers_
 
             args.doc.train.word2vec_clusters_labels[(hyperp_lambda, window)] = kmeans_word2vec_model.labels_
-            # args.doc.validation.word2vec_clusters_labels[(hyperp_lambda, window)] = kmeans_word2vec_model.predict(
-            #   args.doc.validation.word2vec[(hyperp_lambda, window)])
             args.doc.test.word2vec_clusters_labels[(hyperp_lambda, window)] = kmeans_word2vec_model.predict(
                 args.doc.test.word2vec[(hyperp_lambda, window)])
 
@@ -144,12 +137,9 @@ def run_word2vec_model(args, t_sne=False):
             if __name__ == "__main__":
                 if t_sne:
                     make_tsne(args.doc.train.word2vec[(hyperp_lambda, window)], 'Word2Vec', \
-                              args.doc.train.word2vec_clusters_labels[(hyperp_lambda, window)], centers=None, w=window,
-                              h=hyperp_lambda)
+                              args.doc.train.word2vec_clusters_labels[(hyperp_lambda, window)],w=window, h=hyperp_lambda)
                 else:
                     print(f'Clusters number = {args.k}, lambda = {hyperp_lambda}, window size = {window} \n')
-                    # print_sentences_by_clusters(args, word2vec_clusters_dict,
-                    #                           args.doc.validation.word2vec_clusters_labels[(hyperp_lambda, window)])
                     print_sentences_by_clusters(args, word2vec_clusters_dict,
                                                 args.doc.test.word2vec_clusters_labels[(hyperp_lambda, window)])
 
@@ -171,8 +161,7 @@ def run_word2vec_pubmed_model(args,t_sne=False):
     for hyperp_lambda in args.hyperp_lambdas:
 
         args.doc.train.make_word2vec_pubmed(word2vec_pubmed_model, hyperp_lambda)
-        args.doc.validation.make_word2vec_pubmed(word2vec_pubmed_model, hyperp_lambda)
-        # args.doc.test.make_word2vec_pubmed(word2vec_pubmed_model, hyperp_lambda)
+        args.doc.test.make_word2vec_pubmed(word2vec_pubmed_model, hyperp_lambda)
 
         kmeans_word2vec_pubmed_model = KMeans(n_clusters=args.k, random_state=args.random).fit(
             args.doc.train.word2vec_pubmed[hyperp_lambda])
@@ -180,10 +169,7 @@ def run_word2vec_pubmed_model(args,t_sne=False):
         word2vec_pubmed_centroids[hyperp_lambda] = kmeans_word2vec_pubmed_model.cluster_centers_
 
         args.doc.train.word2vec_pubmed_clusters_labels[hyperp_lambda] = kmeans_word2vec_pubmed_model.labels_
-        args.doc.validation.word2vec_pubmed_clusters_labels[hyperp_lambda] = kmeans_word2vec_pubmed_model.predict(
-            args.doc.validation.word2vec_pubmed[hyperp_lambda])
-        # args.doc.test.word2vec_pubmed_clusters_labels[hyperp_lambda] = kmeans_word2vec_pubmed_model.predict(
-        #   args.doc.test.word2vec_pubmed[hyperp_lambda])
+        args.doc.test.word2vec_pubmed_clusters_labels[hyperp_lambda] = kmeans_word2vec_pubmed_model.predict(args.doc.test.word2vec_pubmed[hyperp_lambda])
 
         word2vec_pubmed_clusters_dict = args.doc.train.clusters_to_sentences_indexes_dict(
             args.doc.train.word2vec_pubmed_clusters_labels[hyperp_lambda], args.k)
@@ -191,20 +177,19 @@ def run_word2vec_pubmed_model(args,t_sne=False):
         if __name__ == "__main__":
             if t_sne:
                 make_tsne(args.doc.train.word2vec_pubmed[hyperp_lambda], 'Word2Vec Pubmed', \
-                          args.doc.train.word2vec_pubmed_clusters_labels[hyperp_lambda], centers=None, w=None,
-                          h=hyperp_lambda)
+                          args.doc.train.word2vec_pubmed_clusters_labels[hyperp_lambda], w=None, h=hyperp_lambda)
             else:
                 print(f'Clusters number = {args.k}, lambda = {hyperp_lambda} \n')
                 print_sentences_by_clusters(args, word2vec_pubmed_clusters_dict,
-                                            args.doc.validation.word2vec_pubmed_clusters_labels[hyperp_lambda])
+                                            args.doc.test.word2vec_pubmed_clusters_labels[hyperp_lambda])
     return word2vec_pubmed_centroids
 
 
 # %%
+args = NLPargs()
+args.doc = init_classes()
 
 tfidf_centroids = run_tfidf_model(args,t_sne=True)
-
-
 word2vec_centroids=run_word2vec_model(args,t_sne=True)
 word2vec_pubmed_centroids=run_word2vec_pubmed_model(args,t_sne=True)
 
