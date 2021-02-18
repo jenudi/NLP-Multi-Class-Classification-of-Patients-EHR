@@ -7,13 +7,26 @@ from nltk.corpus import stopwords
 import pandas as pd
 
 
+class NLPargs:
+
+    def __init__(self, k=30, min=0.0, random=0, vec_size=300):
+        self.k = k
+        self.min = min
+        self.random = random
+        self.windows = [3, 5]
+        self.hyperp_lambdas = [0, 0.5, 1]
+        self.vec_size = vec_size
+        self.doc = None
+
+
 class Document:
 
     def __init__(self,text):
         self.text=text
         self.sentences=list()
+        self.sentences_labels = list()
         self.train = Document_set(list())
-        self.val = Document_set(list())
+        self.validation = Document_set(list())
         self.test = Document_set(list())
 
     def do_replaces(self):
@@ -81,19 +94,16 @@ class Document:
     def get_sentences(self):
         return [sentence.text for sentence in self.sentences]
 
-    def train_test_split(self,labels):
-        #train, val, test = list(), list(), list()
+    def train_test_split(self):
+        #train, validation, test = list(), list(), list()
         for index,sentence in enumerate(self.sentences):
             if index % 9 == 0:
-                self.val.sentences.append(sentence)
-                self.val.labels.append(labels[index])
+                self.validation.sentences.append(sentence)
             elif index % 10 == 0:
                 self.test.sentences.append(sentence)
-                self.test.labels.append(labels[index])
             else:
                 self.train.sentences.append(sentence)
-                self.train.labels.append(labels[index])
-        #self.train, self.val, self.test = Document_set(train), Document_set(val),Document_set(test)
+        #self.train, self.validation, self.test = Document_set(train), Document_set(validation),Document_set(test)
 
     #def train_test_split(self):
      #   random.Random(4).shuffle(self.sentences)
@@ -106,14 +116,13 @@ class Document_set:
 
     def __init__(self, sentences):
         self.sentences = sentences
-        self.labels = list()
         self.lexicon = list()
         self.tfidf = list()
-        self.tfidf_clusters_labels=list()
+        self.tfidf_clusters=list()
         self.word2vec = dict()
+        self.word2vec_clusters = dict()
         self.word2vec_pubmed = dict()
-        self.word2vec_clusters_labels = dict()
-        self.word2vec_pubmed_clusters_labels = dict()
+        self.word2vec_pubmed_clusters = dict()
 
     def get_sentences(self):
         return [sentence.text for sentence in self.sentences]
@@ -167,6 +176,7 @@ class Sentence_in_document:
     def __init__(self,text):
         self.text=text
         self.original_text=text
+        self.label=None
         self.tokens=list()
         self.original_text_tokens=list()
 
@@ -180,53 +190,3 @@ class Sentence_in_document:
 
     def make_original_text_tokens(self):
         self.original_text_tokens = re.split(r'[-\s.,;!?]+', self.original_text)[:-1]
-
-
-def make_data(threshold_for_dropping=0):
-    encounter_data = pd.read_csv("encounter.csv").rename(str.lower, axis='columns')
-    data = encounter_data.loc[:, ['soap_note', 'cc']]
-    data.dropna(inplace=True, subset=['soap_note'])
-    data.reset_index(drop=True, inplace=True)
-    data['cc'].fillna('no specific issue', inplace=True)
-    data['cc'] = data['cc'].str.lower()
-    if threshold_for_dropping > 0:
-        temp_dict = data['cc'].value_counts().to_dict()
-        temp_list = [index for index, rare_labels in enumerate(data['cc'].values)
-                     if temp_dict[rare_labels] <= threshold_for_dropping]
-        data.drop(temp_list, inplace=True)
-        data.reset_index(drop=True, inplace=True)
-    data.sort_values('cc',inplace=True)
-    data.reset_index(drop=True, inplace=True)
-    return data
-
-
-def make_preprocess(data):
-    soap = data['soap_note']
-    soap_temp = [re.split('o:''|''o :', i) for i in soap]  # split by "o:" or "o :"
-    temp_sentences = [i[0].strip().strip('s:').lower() for i in soap_temp]
-    try:
-        _ = stopwords.words("english")
-    except LookupError:
-        import nltk
-        nltk.download('stopwords')
-    stopword_set = set(stopwords.words("english"))
-    document = Document('\n '.join(temp_sentences))
-    document.do_replaces()
-    document.make_sentences('\n ')
-    for sentence in document.sentences:
-        sentence.stem_and_check_stop(stopword_set)
-        sentence.make_tokens()
-        sentence.make_original_text_tokens()
-        sentence.text = ' '.join(sentence.tokens)
-    document.train_test_split(data['cc'])
-    document.train.make_lexicon()
-    print('Classes are ready to use.')
-    return document
-
-
-def init_classes(threshold=0):
-    data = make_data(threshold)
-    return make_preprocess(data)
-
-
-
