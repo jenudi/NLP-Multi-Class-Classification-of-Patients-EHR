@@ -187,8 +187,8 @@ def run_word2vec_pubmed_model(args,t_sne=False):
 
 # %%
 args = NLPargs()
-args.doc = init_classes()
-
+args.doc = init_classes(0)
+# %%
 tfidf_centroids = run_tfidf_model(args,t_sne=True)
 word2vec_centroids=run_word2vec_model(args,t_sne=True)
 word2vec_pubmed_centroids=run_word2vec_pubmed_model(args,t_sne=True)

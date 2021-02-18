@@ -13,6 +13,7 @@ class Document:
         self.text=text
         self.sentences=list()
         self.train = Document_set(list())
+        self.val = Document_set(list())
         self.test = Document_set(list())
 
     def do_replaces(self):
@@ -80,17 +81,32 @@ class Document:
     def get_sentences(self):
         return [sentence.text for sentence in self.sentences]
 
-    def train_test_split(self, test=50):
-        random.Random(4).shuffle(self.sentences)
-        train_len = len(self.sentences)-(test)
-        self.train = Document_set(self.sentences[0:train_len])
-        self.test = Document_set(self.sentences[train_len:])
+    def train_test_split(self,labels):
+        #train, val, test = list(), list(), list()
+        for index,sentence in enumerate(self.sentences):
+            if index % 9 == 0:
+                self.val.sentences.append(sentence)
+                self.val.labels.append(labels[index])
+            elif index % 10 == 0:
+                self.test.sentences.append(sentence)
+                self.test.labels.append(labels[index])
+            else:
+                self.train.sentences.append(sentence)
+                self.train.labels.append(labels[index])
+        #self.train, self.val, self.test = Document_set(train), Document_set(val),Document_set(test)
+
+    #def train_test_split(self):
+     #   random.Random(4).shuffle(self.sentences)
+        #train_len = len(self.sentences)-(test)
+      #  self.train = Document_set(self.sentences[0:train_len])
+       # self.test = Document_set(self.sentences[train_len:])
 
 
 class Document_set:
 
     def __init__(self, sentences):
         self.sentences = sentences
+        self.labels = list()
         self.lexicon = list()
         self.tfidf = list()
         self.tfidf_clusters_labels=list()
@@ -148,7 +164,6 @@ class Document_set:
 
 
 class Sentence_in_document:
-
     def __init__(self,text):
         self.text=text
         self.original_text=text
@@ -167,21 +182,26 @@ class Sentence_in_document:
         self.original_text_tokens = re.split(r'[-\s.,;!?]+', self.original_text)[:-1]
 
 
-def init_classes():
-    print('Loading the data')
+def make_data(threshold_for_dropping=0):
     encounter_data = pd.read_csv("encounter.csv").rename(str.lower, axis='columns')
-    encounter_dx = pd.read_csv("encounter_dx.csv").rename(str.lower, axis='columns')
-    lab_results = pd.read_csv("lab_results.csv").rename(str.lower, axis='columns')
-    data1 = encounter_data[['encounter_id', 'member_id', 'patient_gender', 'has_appt', 'soap_note']].set_index(
-        'encounter_id').sort_index()
-    data2 = encounter_dx.groupby('encounter_id')[['code', 'description', 'severity']].apply(
-        lambda x: list(x.values)).sort_index()
-    data3 = lab_results.groupby('encounter_id')[['result_name', 'result_description', 'numeric_result', 'units']].apply(
-        lambda x: list(x.values)).sort_index()
-    data = pd.concat([data1, data2, data3], axis=1)
-    data = data.rename(
-        columns={0: 'code_description_severity', 1: 'result_name_result-description_numeric-result_units'})
-    soap = data['soap_note'].dropna().reset_index(drop=True)
+    data = encounter_data.loc[:, ['soap_note', 'cc']]
+    data.dropna(inplace=True, subset=['soap_note'])
+    data.reset_index(drop=True, inplace=True)
+    data['cc'].fillna('no specific issue', inplace=True)
+    data['cc'] = data['cc'].str.lower()
+    if threshold_for_dropping > 0:
+        temp_dict = data['cc'].value_counts().to_dict()
+        temp_list = [index for index, rare_labels in enumerate(data['cc'].values)
+                     if temp_dict[rare_labels] <= threshold_for_dropping]
+        data.drop(temp_list, inplace=True)
+        data.reset_index(drop=True, inplace=True)
+    data.sort_values('cc',inplace=True)
+    data.reset_index(drop=True, inplace=True)
+    return data
+
+
+def make_preprocess(data):
+    soap = data['soap_note']
     soap_temp = [re.split('o:''|''o :', i) for i in soap]  # split by "o:" or "o :"
     temp_sentences = [i[0].strip().strip('s:').lower() for i in soap_temp]
     try:
@@ -198,9 +218,15 @@ def init_classes():
         sentence.make_tokens()
         sentence.make_original_text_tokens()
         sentence.text = ' '.join(sentence.tokens)
-    document.train_test_split(test=50)
+    document.train_test_split(data['cc'])
     document.train.make_lexicon()
     print('Classes are ready to use.')
     return document
+
+
+def init_classes(threshold=0):
+    data = make_data(threshold)
+    return make_preprocess(data)
+
 
 
