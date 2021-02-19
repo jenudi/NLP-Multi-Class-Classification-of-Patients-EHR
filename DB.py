@@ -1,5 +1,6 @@
 from bson.son import SON
 from pymongo import MongoClient
+from collections import Counter
 from main import args, tfidf_centroids, word2vec_centroids,word2vec_chosen_params
 
 
@@ -13,13 +14,15 @@ if __name__ == "__main__":
 
         tfidf_clusters_list.append(SON({"_id": cluster_number+1,
                                         "sentences in cluster": list(),
-                                        "centroid": list(map(float,tfidf_centroids[cluster_number]))
+                                        "centroid": list(map(float,tfidf_centroids[cluster_number])),
+                                        "most common labels": list()
                                         }))
 
         word2vec_clusters_list.append(SON({"_id": cluster_number+1,
                                             "sentences in cluster": list(),
-                                            "centroid": list(map(float,word2vec_centroids[word2vec_chosen_params][cluster_number]))
-                                            }))
+                                            "centroid": list(map(float,word2vec_centroids[word2vec_chosen_params][cluster_number])),
+                                            "most common labels": list()
+                                           }))
 
     sentence_id=0
 
@@ -31,7 +34,11 @@ if __name__ == "__main__":
             sentence_word2vec_cluster=set.word2vec_clusters[word2vec_chosen_params][index]
 
             tfidf_clusters_list[sentence_tfidf_cluster-1]["sentences in cluster"].append(sentence_id)
+            tfidf_clusters_list[sentence_tfidf_cluster-1]["most common labels"].append(sentence.label)
+
             word2vec_clusters_list[sentence_word2vec_cluster-1]["sentences in cluster"].append(sentence_id)
+            word2vec_clusters_list[sentence_tfidf_cluster-1]["most common labels"].append(sentence.label)
+
 
             new_sentence_document=SON({
                 "_id": sentence_id,
@@ -42,6 +49,18 @@ if __name__ == "__main__":
                 })
 
             sentences_list.append(new_sentence_document)
+
+    for cluster_list in [tfidf_clusters_list, word2vec_clusters_list]:
+        for cluster_number in range(args.k):
+            counter=Counter(cluster_list[cluster_number]["most common labels"])
+            if len(counter.most_common(3))>2:
+                cluster_list[cluster_number]["most common labels"]=[count[0] for count in counter.most_common(3)]
+            elif len(counter.most_common(3))==2:
+                cluster_list[cluster_number]["most common labels"]=[count[0] for count in counter.most_common(2)]
+            else:
+                cluster_list[cluster_number]["most common labels"] =[counter.most_common(1)[0][0]]
+
+
 
     client = MongoClient('mongodb://localhost:27017/')
     with client:
