@@ -84,7 +84,6 @@ def print_sentences_by_clusters(args, clusters_dict, validation_predict):
         print('\n')
 
 
-
 def make_tsne(model, model_name, labels, w=None, h=None):
     fig = plt.figure()
     tsne = TSNE()
