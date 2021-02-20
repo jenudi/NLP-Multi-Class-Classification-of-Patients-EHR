@@ -36,6 +36,7 @@ def make_data(threshold_for_dropping=0):
                      if temp_dict[rare_labels] <= threshold_for_dropping]
         data.drop(temp_list, inplace=True)
         data.reset_index(drop=True, inplace=True)
+
     data.sort_values('cc',inplace=True)
     data.reset_index(drop=True, inplace=True)
     return data
