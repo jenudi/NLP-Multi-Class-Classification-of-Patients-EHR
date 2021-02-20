@@ -8,23 +8,42 @@ from gensim.models.keyedvectors import KeyedVectors
 
 app = Flask(__name__)
 
-
-@app.route('/tfidf')
-def tfidf_representation(sentence):
-    pass
-
-
-@app.route('/tfidf')
-def word2vec_representation(sentence):
-    pass
-
-
 try:
     _ = stopwords.words("english")
 except LookupError:
     import nltk
     nltk.download('stopwords')
 stopword_set = set(stopwords.words("english"))
+
+@app.route('/tfidf')
+def tfidf_representation():
+    sentence = request.get()
+
+    if sentence is None:
+        return jsonify({"error": "no sentence"})
+    elif not isinstance(sentence, str):
+        return jsonify({"error": "value entered is not a string"})
+
+    try:
+        preprocessed_sentence = sentence_preprocess(sentence, stopword_set)
+    except:
+        return jsonify({"error: sentence could not be preprocessed"})
+
+
+@app.route('/word2vec')
+def word2vec_representation():
+    sentence=request.get()
+
+    if sentence is None:
+        return jsonify({"error":"no sentence"})
+    elif not isinstance(sentence,str):
+        return jsonify({"error":"value entered is not a string"})
+
+    try:
+        preprocessed_sentence = sentence_preprocess(sentence,stopword_set)
+    except:
+        return jsonify({"error: sentence could not be preprocessed"})
+
 
 
 def sentence_preprocess(sentence,stopword_set):
@@ -35,7 +54,8 @@ def sentence_preprocess(sentence,stopword_set):
     preprocessed_sentence.make_tokens()
     preprocessed_sentence.make_original_text_tokens()
     preprocessed_sentence.text = ' '.join(sentence.tokens)
+    return preprocessed_sentence
 
 
 if __name__ == "__main__":
-    app.run()
+    app.run(host="127.0.0.1.", port=8000)
