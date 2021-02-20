@@ -5,18 +5,21 @@ from collections import OrderedDict
 from nltk.stem.porter import PorterStemmer
 from nltk.corpus import stopwords
 import pandas as pd
-
+import torch
 
 class NLPargs:
 
-    def __init__(self, k=30, min=0.0, random=0, vec_size=300):
+    def __init__(self, k=30, min=0.0, random=0, vec_size=300, hidden=128,min_cls=5):
         self.k = k
         self.min = min
         self.random = random
         self.windows = [3, 5]
         self.hyperp_lambdas = [0, 0.5, 1]
         self.vec_size = vec_size
+        self.hidden = hidden
         self.doc = None
+        self.min_cls = min_cls
+        self.lr = 0.005
 
 
 class Document:
@@ -95,7 +98,6 @@ class Document:
         return [sentence.text for sentence in self.sentences]
 
     def train_test_split(self):
-        #train, validation, test = list(), list(), list()
         for index,sentence in enumerate(self.sentences):
             if index % 9 == 0:
                 self.validation.sentences.append(sentence)
@@ -103,13 +105,6 @@ class Document:
                 self.test.sentences.append(sentence)
             else:
                 self.train.sentences.append(sentence)
-        #self.train, self.validation, self.test = Document_set(train), Document_set(validation),Document_set(test)
-
-    #def train_test_split(self):
-     #   random.Random(4).shuffle(self.sentences)
-        #train_len = len(self.sentences)-(test)
-      #  self.train = Document_set(self.sentences[0:train_len])
-       # self.test = Document_set(self.sentences[train_len:])
 
 
 class Document_set:
@@ -123,6 +118,15 @@ class Document_set:
         self.word2vec_clusters = dict()
         self.word2vec_pubmed = dict()
         self.word2vec_pubmed_clusters = dict()
+        self.labels_dict = dict()
+        self.weights = list()
+
+    def make_labels_dict_and_weights(self):
+        temp_list = [i.label for i in self.sentences]
+        cls_w = data['cc'].value_counts().tolist()
+        cls_numbers = [list(dict.fromkeys(temp_list)).index(i) for i in temp_list]
+        self.labels_dict = dict(zip( range(len(set(cls_numbers)))  , list(dict.fromkeys(temp_list))   ))
+        self.weights = torch.FloatTensor([1 - (x / sum(cls_w)) for x in cls_w][::-1])
 
     def get_sentences(self):
         return [sentence.text for sentence in self.sentences]

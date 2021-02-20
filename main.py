@@ -1,6 +1,7 @@
 # %% Imports
 
 from classes import *
+from RNN import *
 from sklearn.feature_extraction.text import TfidfVectorizer
 from gensim.models.word2vec import Word2Vec
 from sklearn.cluster import KMeans
@@ -8,15 +9,19 @@ from gensim.models.keyedvectors import KeyedVectors
 from matplotlib import pyplot as plt
 from sklearn.manifold import TSNE
 import seaborn as sns
+import torch.optim as optim
+
+from rnn_utils import make_embbedings
+from rnn_utils import make_random_sample
 
 sns.set(rc={'figure.figsize': (11.7, 8.27)}, style="darkgrid")
-
 
 
 # %% Initialization
 def init_classes(threshold=0):
     data = make_data(threshold)
     return make_preprocess(data)
+
 
 def make_data(threshold_for_dropping=0):
     encounter_data = pd.read_csv("encounter.csv").rename(str.lower, axis='columns')
@@ -100,6 +105,44 @@ def make_tsne(model, model_name, labels, w=None, h=None):
     else:
         fig.suptitle(f'Model: {model_name}', fontsize=16)
     plt.show()
+
+
+#%% RNN
+def train(input_tensor, cls_numbers):
+    hidden = rnn.init_hidden()
+    output = None
+    for i in range(input_tensor.size()[0]):
+        output, hidden = rnn(input_tensor[i], hidden)
+    loss = criterion(output, cls_numbers)
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
+    return output, loss.item()
+
+
+def init_rnn(n_iters=100000):
+    current_loss = 0
+    all_losses = []
+    plot_steps, print_steps = 1000, 5000
+    for i in range(n_iters):
+        label, sentence,input_tensor, cls_numbers = make_random_sample(args,embbedings_model)
+        cls_numbers = torch.tensor(cls_numbers)
+        cls_n = torch.reshape(cls_numbers, (-1,))
+        output, loss = train(input_tensor, cls_n)
+        current_loss += loss
+        print(i)
+        if (i + 1) % plot_steps == 0:
+            all_losses.append(current_loss / plot_steps)
+            current_loss = 0
+        if (i + 1) % print_steps == 0:
+            guess = args.doc.train.labels_dict[int(torch.max(output, 1)[1].detach())]
+            correct = "CORRECT" if guess == label else f"WRONG ({label})"
+            print(f"{i + 1} {(i + 1) / n_iters * 100} {loss:.4f} {sentence} / {guess} {correct}")
+
+    plt.figure()
+    plt.plot(all_losses)
+    plt.show()
+
 
 
 # %% TF-IDF
@@ -222,8 +265,18 @@ def word2vec_pubmed_kmeans(args,t_sne=False):
     return word2vec_pubmed_centroids
 
 
-args = NLPargs()
-args.doc = init_classes(0)
+#%%
+
+args = NLPargs(k=30, min=0.0, random=0, vec_size=300, hidden=128,min_cls=5)
+args.doc = init_classes(args.min_cls)
+
+args.doc.train.make_labels_dict_and_weights()
+embbedings_model = make_embbedings(args)
+rnn = RNN(args.vec_size, args.hidden, len(args.doc.train.labels_dict))
+criterion = nn.NLLLoss(weight=args.doc.train.weights)
+optimizer = torch.optim.SGD(rnn.parameters(), lr=args.lr)
+init_rnn(n_iters=10000)
+
 
 tfidf_centroids = tfidf_kmeans(args,t_sne=True)
 word2vec_centroids=word2vec_kmeans(args,t_sne=True)
