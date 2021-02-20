@@ -268,7 +268,7 @@ def word2vec_pubmed_kmeans(args,t_sne=False):
 
 #%%
 
-args = NLPargs(k=30, min=0.0, random=0, vec_size=300, hidden=128*2,min_cls=5, lr=0.00005)
+args = NLPargs(k=30, min=0.0, random=0, vec_size=300, hidden=350,min_cls=5, lr=0.0005)
 args.doc = init_classes(args.min_cls)
 
 args.doc.train.make_labels_dict_and_weights()
