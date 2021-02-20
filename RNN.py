@@ -23,16 +23,3 @@ class RNN(nn.Module):
 
 
 
-
-
-"""
-def predict(input_line):
-    print(f"\n> {input_line}")
-    with torch.no_grad():
-        line_tensor = line_to_tensor(input_line)
-        hidden = rnn.init_hidden()
-        for i in range(line_tensor.size()[0]):
-            output, hidden = rnn(line_tensor[i], hidden)
-        guess = category_from_output(output)
-        print(guess)
-"""

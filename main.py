@@ -9,7 +9,6 @@ from gensim.models.keyedvectors import KeyedVectors
 from matplotlib import pyplot as plt
 from sklearn.manifold import TSNE
 import seaborn as sns
-import torch.optim as optim
 
 from rnn_utils import make_embbedings
 from rnn_utils import make_random_sample
@@ -145,6 +144,17 @@ def init_rnn(n_iters=100000):
     plt.show()
 
 
+def predict(args,model):
+    label, sentence,input_tensor, cls_numbers = make_random_sample(args,model)
+    print(f"\n> {sentence}")
+    with torch.no_grad():
+        hidden = rnn.init_hidden()
+        for i in range(input_tensor.size()[0]):
+            output, hidden = rnn(input_tensor[i], hidden)
+        guess = args.doc.train.labels_dict[int(torch.max(output, 1)[1].detach())]
+        print(guess)
+
+
 
 # %% TF-IDF
 def tfidf_kmeans(args, t_sne=False):
@@ -277,6 +287,10 @@ rnn = RNN(args.vec_size, args.hidden, len(args.doc.train.labels_dict))
 criterion = nn.NLLLoss(weight=args.doc.train.weights)
 optimizer = torch.optim.SGD(rnn.parameters(), lr=args.lr)
 init_rnn(n_iters=100000)
+#torch.save(rnn.state_dict(),'rnn_model.pth')
+#rnn = RNN(args.vec_size, args.hidden, len(args.doc.train.labels_dict))
+#rnn.load_state_dict(torch.load('rnn_model.pth'))
+#rnn.eval()
 
 #%%
 tfidf_centroids = tfidf_kmeans(args,t_sne=True)
