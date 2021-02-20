@@ -6,10 +6,12 @@ from nltk.stem.porter import PorterStemmer
 from nltk.corpus import stopwords
 import pandas as pd
 import torch
+from itertools import groupby
+
 
 class NLPargs:
 
-    def __init__(self, k=30, min=0.0, random=0, vec_size=300, hidden=128,min_cls=5):
+    def __init__(self, k=30, min=0.0, random=0, vec_size=300, hidden=128,min_cls=5, lr=0.005):
         self.k = k
         self.min = min
         self.random = random
@@ -19,7 +21,7 @@ class NLPargs:
         self.hidden = hidden
         self.doc = None
         self.min_cls = min_cls
-        self.lr = 0.005
+        self.lr = lr
 
 
 class Document:
@@ -123,10 +125,10 @@ class Document_set:
 
     def make_labels_dict_and_weights(self):
         temp_list = [i.label for i in self.sentences]
-        cls_w = data['cc'].value_counts().tolist()
+        cls_w = np.array([len(list(group)) for key, group in groupby(temp_list)])
         cls_numbers = [list(dict.fromkeys(temp_list)).index(i) for i in temp_list]
         self.labels_dict = dict(zip( range(len(set(cls_numbers)))  , list(dict.fromkeys(temp_list))   ))
-        self.weights = torch.FloatTensor([1 - (x / sum(cls_w)) for x in cls_w][::-1])
+        self.weights = torch.FloatTensor(1 - (cls_w / sum(cls_w)))
 
     def get_sentences(self):
         return [sentence.text for sentence in self.sentences]

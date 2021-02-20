@@ -131,7 +131,7 @@ def init_rnn(n_iters=100000):
         cls_n = torch.reshape(cls_numbers, (-1,))
         output, loss = train(input_tensor, cls_n)
         current_loss += loss
-        print(i)
+        print(f"index: {i}, loss: {loss}")
         if (i + 1) % plot_steps == 0:
             all_losses.append(current_loss / plot_steps)
             current_loss = 0
@@ -268,7 +268,7 @@ def word2vec_pubmed_kmeans(args,t_sne=False):
 
 #%%
 
-args = NLPargs(k=30, min=0.0, random=0, vec_size=300, hidden=128,min_cls=5)
+args = NLPargs(k=30, min=0.0, random=0, vec_size=300, hidden=128*2,min_cls=5, lr=0.00005)
 args.doc = init_classes(args.min_cls)
 
 args.doc.train.make_labels_dict_and_weights()
@@ -276,9 +276,9 @@ embbedings_model = make_embbedings(args)
 rnn = RNN(args.vec_size, args.hidden, len(args.doc.train.labels_dict))
 criterion = nn.NLLLoss(weight=args.doc.train.weights)
 optimizer = torch.optim.SGD(rnn.parameters(), lr=args.lr)
-init_rnn(n_iters=10000)
+init_rnn(n_iters=100000)
 
-
+#%%
 tfidf_centroids = tfidf_kmeans(args,t_sne=True)
 word2vec_centroids=word2vec_kmeans(args,t_sne=True)
 word2vec_pubmed_centroids=word2vec_pubmed_kmeans(args,t_sne=True)
