@@ -15,9 +15,8 @@ except LookupError:
     nltk.download('stopwords')
 stopword_set = set(stopwords.words("english"))
 
-@app.route('/tfidf')
-def tfidf_representation():
-    sentence = request.get()
+@app.route("/tfidf/<str:sentence>")
+def tfidf_representation(sentence):
 
     if sentence is None:
         return jsonify({"error": "no sentence"})
@@ -30,9 +29,8 @@ def tfidf_representation():
         return jsonify({"error: sentence could not be preprocessed"})
 
 
-@app.route('/word2vec')
-def word2vec_representation():
-    sentence=request.get()
+@app.route("/word2vec/<str:sentence>")
+def word2vec_representation(sentence):
 
     if sentence is None:
         return jsonify({"error":"no sentence"})
