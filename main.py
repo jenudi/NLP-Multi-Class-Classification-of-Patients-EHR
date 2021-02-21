@@ -12,6 +12,7 @@ import seaborn as sns
 
 from rnn_utils import make_embbedings
 from rnn_utils import make_random_sample
+from rnn_utils import make_random_sample_val
 
 sns.set(rc={'figure.figsize': (11.7, 8.27)}, style="darkgrid")
 
@@ -146,8 +147,11 @@ def init_rnn(n_iters=100000):
     torch.save(rnn.state_dict(), 'rnn_model.pth')
 
 
-def predict(args,model):
-    label, sentence,input_tensor, cls_numbers = make_random_sample(args,model)
+def predict(args,model,val=True):
+    if val:
+        label, sentence,input_tensor = make_random_sample_val(args, model)
+    else:
+        label, sentence,input_tensor, cls_numbers = make_random_sample(args,model)
     print(f"\n> {sentence}")
     with torch.no_grad():
         hidden = rnn.init_hidden()
@@ -288,6 +292,8 @@ embbedings_model = make_embbedings(args)
 rnn = RNN(args.vec_size, args.hidden, len(args.doc.train.labels_dict))
 criterion = nn.NLLLoss(weight=args.doc.train.weights)
 optimizer = torch.optim.SGD(rnn.parameters(), lr=args.lr)
+
+
 init_rnn(n_iters=100000)
 #torch.save(rnn.state_dict(),'rnn_model.pth')
 #rnn = RNN(args.vec_size, args.hidden, len(args.doc.train.labels_dict))

@@ -123,6 +123,17 @@ class Document_set:
         self.labels_dict = dict()
         self.weights = list()
 
+        self.word2vec_3 = None
+
+    def make_embbedings(self,window,model):
+        train_tokens = args.doc.train.get_sentences_tokens()
+        word2vec_model = Word2Vec(min_count=args.min, window=5, size=args.vec_size,
+                                  sample=1e-3, alpha=0.03, min_alpha=0.0007)
+        word2vec_model.build_vocab(train_tokens)
+        word2vec_model.train(train_tokens, total_examples=word2vec_model.corpus_count, epochs=30)
+        self.word2vec_3 = word2vec_model
+
+
     def make_labels_dict_and_weights(self):
         temp_list = [i.label for i in self.sentences]
         cls_w = np.array([len(list(group)) for key, group in groupby(temp_list)])
