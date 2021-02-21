@@ -291,6 +291,7 @@ init_rnn(n_iters=100000)
 #rnn = RNN(args.vec_size, args.hidden, len(args.doc.train.labels_dict))
 #rnn.load_state_dict(torch.load('rnn_model.pth'))
 #rnn.eval()
+#predict(args,embbedings_model)
 
 #%%
 tfidf_centroids = tfidf_kmeans(args,t_sne=True)
