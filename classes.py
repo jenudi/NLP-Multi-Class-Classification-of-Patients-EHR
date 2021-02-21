@@ -5,18 +5,23 @@ from collections import OrderedDict
 from nltk.stem.porter import PorterStemmer
 from nltk.corpus import stopwords
 import pandas as pd
+import torch
+from itertools import groupby
 
 
 class NLPargs:
 
-    def __init__(self, k=30, min=0.0, random=0, vec_size=300):
+    def __init__(self, k=30, min=0.0, random=0, vec_size=300, hidden=128,min_cls=5, lr=0.005):
         self.k = k
         self.min = min
         self.random = random
         self.windows = [3, 5]
         self.hyperp_lambdas = [0, 0.5, 1]
         self.vec_size = vec_size
+        self.hidden = hidden
         self.doc = None
+        self.min_cls = min_cls
+        self.lr = lr
 
 
 class Document:
@@ -95,7 +100,6 @@ class Document:
         return [sentence.text for sentence in self.sentences]
 
     def train_test_split(self):
-        #train, validation, test = list(), list(), list()
         for index,sentence in enumerate(self.sentences):
             if index % 9 == 0:
                 self.validation.sentences.append(sentence)
@@ -103,13 +107,6 @@ class Document:
                 self.test.sentences.append(sentence)
             else:
                 self.train.sentences.append(sentence)
-        #self.train, self.validation, self.test = Document_set(train), Document_set(validation),Document_set(test)
-
-    #def train_test_split(self):
-     #   random.Random(4).shuffle(self.sentences)
-        #train_len = len(self.sentences)-(test)
-      #  self.train = Document_set(self.sentences[0:train_len])
-       # self.test = Document_set(self.sentences[train_len:])
 
 
 class Document_set:
@@ -123,6 +120,26 @@ class Document_set:
         self.word2vec_clusters = dict()
         self.word2vec_pubmed = dict()
         self.word2vec_pubmed_clusters = dict()
+        self.labels_dict = dict()
+        self.weights = list()
+
+        self.word2vec_3 = None
+
+    def make_embbedings(self,window,model):
+        train_tokens = args.doc.train.get_sentences_tokens()
+        word2vec_model = Word2Vec(min_count=args.min, window=5, size=args.vec_size,
+                                  sample=1e-3, alpha=0.03, min_alpha=0.0007)
+        word2vec_model.build_vocab(train_tokens)
+        word2vec_model.train(train_tokens, total_examples=word2vec_model.corpus_count, epochs=30)
+        self.word2vec_3 = word2vec_model
+
+
+    def make_labels_dict_and_weights(self):
+        temp_list = [i.label for i in self.sentences]
+        cls_w = np.array([len(list(group)) for key, group in groupby(temp_list)])
+        cls_numbers = [list(dict.fromkeys(temp_list)).index(i) for i in temp_list]
+        self.labels_dict = dict(zip( range(len(set(cls_numbers)))  , list(dict.fromkeys(temp_list))   ))
+        self.weights = torch.FloatTensor(1 - (cls_w / sum(cls_w)))
 
     def get_sentences(self):
         return [sentence.text for sentence in self.sentences]
