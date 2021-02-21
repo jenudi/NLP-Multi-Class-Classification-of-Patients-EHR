@@ -109,6 +109,7 @@ def make_tsne(model, model_name, labels, w=None, h=None):
 
 #%% RNN
 def train(input_tensor, cls_numbers):
+    rnn.train()
     hidden = rnn.init_hidden()
     output = None
     for i in range(input_tensor.size()[0]):
@@ -142,6 +143,7 @@ def init_rnn(n_iters=100000):
     plt.figure()
     plt.plot(all_losses)
     plt.show()
+    torch.save(rnn.state_dict(), 'rnn_model.pth')
 
 
 def predict(args,model):
@@ -280,9 +282,9 @@ def word2vec_pubmed_kmeans(args,t_sne=False):
 
 args = NLPargs(k=30, min=0.0, random=0, vec_size=300, hidden=350,min_cls=5, lr=0.0005)
 args.doc = init_classes(args.min_cls)
-
 args.doc.train.make_labels_dict_and_weights()
 embbedings_model = make_embbedings(args)
+
 rnn = RNN(args.vec_size, args.hidden, len(args.doc.train.labels_dict))
 criterion = nn.NLLLoss(weight=args.doc.train.weights)
 optimizer = torch.optim.SGD(rnn.parameters(), lr=args.lr)
