@@ -10,9 +10,7 @@ from matplotlib import pyplot as plt
 from sklearn.manifold import TSNE
 import seaborn as sns
 
-from rnn_utils import make_embbedings
-from rnn_utils import make_random_sample
-from rnn_utils import make_random_sample_val
+
 
 sns.set(rc={'figure.figsize': (11.7, 8.27)}, style="darkgrid")
 
@@ -90,7 +88,7 @@ def print_sentences_by_clusters(args, clusters_dict, validation_predict):
         print('\n')
 
 
-def make_tsne(model, model_name, labels, w=None, h=None):
+def make_tsne(model, model_name, labels):
     fig = plt.figure()
     tsne = TSNE()
     palette = sns.color_palette("icefire", len(set(labels)))
@@ -99,17 +97,11 @@ def make_tsne(model, model_name, labels, w=None, h=None):
     centers = temp_df.groupby(by=["y"]).mean()
     sns.scatterplot(x=model_tsne_embedded[:, 0], y=model_tsne_embedded[:, 1], legend='full', palette=palette, hue=labels)
     plt.scatter(centers.iloc[:,0].values, centers.iloc[:,1].values, c=palette, s=200, alpha=0.5)
-    if (w is not None) and (h is not None):
-        fig.suptitle(f'Model: {model_name}, Window size: {w}, lambda {h}', fontsize=16)
-    elif h is not None:
-        fig.suptitle(f'Model: {model_name}, lambda {h}', fontsize=16)
-    else:
-        fig.suptitle(f'Model: {model_name}', fontsize=16)
+    fig.suptitle(f'Model: {model_name}', fontsize=16)
     plt.show()
 
 
-#%% RNN
-def train(input_tensor, cls_numbers):
+def train_rnn(input_tensor, cls_numbers):
     rnn.train()
     hidden = rnn.init_hidden()
     output = None
@@ -122,12 +114,13 @@ def train(input_tensor, cls_numbers):
     return output, loss.item()
 
 
-def init_rnn(n_iters=100000):
+def init_rnn(args,n_iters=100000):
     current_loss = 0
     all_losses = []
     plot_steps, print_steps = 1000, 5000
+    model=args.doc.train.word2vec_for_rnn
     for i in range(n_iters):
-        label, sentence,input_tensor, cls_numbers = make_random_sample(args,embbedings_model)
+        label, sentence,input_tensor, cls_numbers = args.doc.train.make_random_sample_for_rnn(model)
         cls_numbers = torch.tensor(cls_numbers)
         cls_n = torch.reshape(cls_numbers, (-1,))
         output, loss = train(input_tensor, cls_n)
@@ -147,11 +140,12 @@ def init_rnn(n_iters=100000):
     torch.save(rnn.state_dict(), 'rnn_model.pth')
 
 
-def predict(args,model,val=True):
-    if val:
-        label, sentence,input_tensor = make_random_sample_val(args, model)
+def predict_rnn(args,predicted_set='val'):
+    model=args.doc.train.word2vec_for_rnn
+    if predicted_set=='val':
+        label, sentence,input_tensor,cls_numbers = args.doc.validation.make_random_sample_for_rnn(model)
     else:
-        label, sentence,input_tensor, cls_numbers = make_random_sample(args,model)
+        label, sentence, input_tensor,cls_numbers = args.doc.test.make_random_sample_for_rnn(model)
     print(f"\n> {sentence}")
     with torch.no_grad():
         hidden = rnn.init_hidden()
@@ -163,7 +157,7 @@ def predict(args,model,val=True):
 
 
 # %% TF-IDF
-def tfidf_kmeans(args, t_sne=False):
+def tfidf_kmeans(args, print_sentences=False, t_sne=False):
     tfidf_model = TfidfVectorizer(min_df=args.min,
                                   smooth_idf=True,
                                   norm='l1')
@@ -183,128 +177,103 @@ def tfidf_kmeans(args, t_sne=False):
 
     tfidf_clusters_dict = args.doc.train.clusters_to_sentences_indexes_dict(args.doc.train.tfidf_clusters,args.k)
 
-    if __name__ == "__main__":
+    if print_sentences:
         print(f'Clusters number = {args.k}\n')
         print_sentences_by_clusters(args, tfidf_clusters_dict,
                                     args.doc.test.tfidf_clusters)
         if t_sne:
-            make_tsne(args.doc.train.tfidf, 'TF-IDF', args.doc.train.tfidf_clusters, w=None, h=None)
+            make_tsne(args.doc.train.tfidf, 'TF-IDF', args.doc.train.tfidf_clusters)
 
     return kmeans_tfidf_model.cluster_centers_
 
 
 # %% Word2Vec
-def word2vec_kmeans(args, t_sne=False):
-    train_tokens = args.doc.train.get_sentences_tokens()
+def word2vec_kmeans(args,word2vec_model, vector_size,print_sentences=False,t_sne=False):
     # train_tokens.append(['un-known'])
-    word2vec_centroids = dict()
 
-    for window in args.windows:
-        word2vec_model = Word2Vec(min_count=args.min,
-                                  window=window,
-                                  size=args.vec_size,
-                                  sample=1e-3,
-                                  alpha=0.03,
-                                  min_alpha=0.0007)
+    train_tokens = args.doc.train.get_sentences_tokens()
 
-        word2vec_model.build_vocab(train_tokens)
-        word2vec_model.train(train_tokens,
-                             total_examples=word2vec_model.corpus_count,
-                             epochs=30)
+    word2vec_model.build_vocab(train_tokens)
 
-        for hyperp_lambda in args.hyperp_lambdas:
+    word2vec_model.train(train_tokens,total_examples=word2vec_model.corpus_count,epochs=30)
 
-            args.doc.train.make_word2vec(word2vec_model, hyperp_lambda, window)
-            args.doc.validation.make_word2vec(word2vec_model, hyperp_lambda, window)
-            args.doc.test.make_word2vec(word2vec_model, hyperp_lambda, window)
+    args.doc.train.make_word2vec_for_kmeans(word2vec_model, vector_size)
+    args.doc.validation.make_word2vec_for_kmeans(word2vec_model, vector_size)
+    args.doc.test.make_word2vec_for_kmeans(word2vec_model, vector_size)
 
-            kmeans_word2vec_model = KMeans(n_clusters=args.k,
-                                           random_state=args.random).fit(
-                args.doc.train.word2vec[(hyperp_lambda,window)])
+    word2vec_for_kmeans_model = KMeans(n_clusters=args.k,
+                                   random_state=args.random).fit(args.doc.train.word2vec_for_kmeans)
 
-            word2vec_centroids[(hyperp_lambda, window)] = kmeans_word2vec_model.cluster_centers_
+    word2vec_centroids = word2vec_for_kmeans_model.cluster_centers_
 
-            args.doc.train.word2vec_clusters[(hyperp_lambda, window)] = kmeans_word2vec_model.labels_
-            args.doc.validation.word2vec_clusters[(hyperp_lambda, window)] = kmeans_word2vec_model.predict(
-                args.doc.validation.word2vec[(hyperp_lambda, window)])
-            args.doc.test.word2vec_clusters[(hyperp_lambda, window)] = kmeans_word2vec_model.predict(
-                args.doc.test.word2vec[(hyperp_lambda, window)])
+    args.doc.train.word2vec_clusters = word2vec_for_kmeans_model.labels_
+    args.doc.validation.word2vec_clusters = word2vec_for_kmeans_model.predict(args.doc.validation.word2vec_for_kmeans)
+    args.doc.test.word2vec_clusters = word2vec_for_kmeans_model.predict(args.doc.test.word2vec_for_kmeans)
 
-            word2vec_clusters_dict = args.doc.train.clusters_to_sentences_indexes_dict(
-                args.doc.train.word2vec_clusters[(hyperp_lambda, window)], args.k)
 
-            if __name__ == "__main__":
-                print(f'Clusters number = {args.k}, lambda = {hyperp_lambda}, window size = {window} \n')
-                print_sentences_by_clusters(args, word2vec_clusters_dict,
-                                            args.doc.test.word2vec_clusters[(hyperp_lambda, window)])
-                if t_sne:
-                    make_tsne(args.doc.train.word2vec[(hyperp_lambda, window)], 'Word2Vec', \
-                              args.doc.train.word2vec_clusters[(hyperp_lambda, window)],w=window, h=hyperp_lambda)
-
+    if print_sentences:
+        print(f'Clusters number = {args.k}')
+        word2vec_clusters_dict = args.doc.train.clusters_to_sentences_indexes_dict(args.doc.train.word2vec_clusters,
+                                                                                   args.k)
+        print_sentences_by_clusters(args, word2vec_clusters_dict,args.doc.test.word2vec_clusters)
+    if t_sne:
+        make_tsne(args.doc.train.word2vec_for_kmeans, 'Word2Vec',args.doc.train.word2vec_clusters)
 
     return word2vec_centroids
-
-
-def word2vec_pubmed_kmeans(args,t_sne=False):
-    try:
-        word2vec_pubmed_model = KeyedVectors.load_word2vec_format('PubMed-w2v.bin', binary=True)
-        # word2vec_pubmed_model = Word2Vec.load("word2vec_pubmed.model")
-    except FileNotFoundError:
-        print('No such model file')
-        return
-
-    word2vec_pubmed_centroids = dict()
-
-    for hyperp_lambda in args.hyperp_lambdas:
-
-        args.doc.train.make_word2vec_pubmed(word2vec_pubmed_model, hyperp_lambda)
-        args.doc.test.make_word2vec_pubmed(word2vec_pubmed_model, hyperp_lambda)
-
-        kmeans_word2vec_pubmed_model = KMeans(n_clusters=args.k, random_state=args.random).fit(
-            args.doc.train.word2vec_pubmed[hyperp_lambda])
-
-        word2vec_pubmed_centroids[hyperp_lambda] = kmeans_word2vec_pubmed_model.cluster_centers_
-
-        args.doc.train.word2vec_pubmed_clusters[hyperp_lambda] = kmeans_word2vec_pubmed_model.labels_
-        args.doc.test.word2vec_pubmed_clusters[hyperp_lambda] = kmeans_word2vec_pubmed_model.predict(args.doc.test.word2vec_pubmed[hyperp_lambda])
-
-        word2vec_pubmed_clusters_dict = args.doc.train.clusters_to_sentences_indexes_dict(
-            args.doc.train.word2vec_pubmed_clusters[hyperp_lambda], args.k)
-
-        if __name__ == "__main__":
-            print(f'Clusters number = {args.k}, lambda = {hyperp_lambda} \n')
-            print_sentences_by_clusters(args, word2vec_pubmed_clusters_dict,
-                                        args.doc.test.word2vec_pubmed_clusters[hyperp_lambda])
-            if t_sne:
-                make_tsne(args.doc.train.word2vec_pubmed[hyperp_lambda], 'Word2Vec Pubmed', \
-                          args.doc.train.word2vec_pubmed_clusters[hyperp_lambda], w=None, h=hyperp_lambda)
-
-    return word2vec_pubmed_centroids
 
 
 #%%
 
 args = NLPargs(k=30, min=0.0, random=0, vec_size=300, hidden=350,min_cls=5, lr=0.0005)
 args.doc = init_classes(args.min_cls)
-args.doc.train.make_labels_dict_and_weights()
-embbedings_model = make_embbedings(args)
+
+
+#%%
+tfidf_centroids = tfidf_kmeans(args,print_sentences=False,t_sne=True)
+
+word2vec_window_3_model = Word2Vec(min_count=args.min,
+                                   window=3,
+                                   size=args.vec_size,
+                                   sample=1e-3,
+                                   alpha=0.03,
+                                   min_alpha=0.0007)
+
+word2vec_window_5_model = Word2Vec(min_count=args.min,
+                                   window=5,
+                                   size=args.vec_size,
+                                   sample=1e-3,
+                                   alpha=0.03,
+                                   min_alpha=0.0007)
+
+try:
+    word2vec_pubmed_model = KeyedVectors.load_word2vec_format('PubMed-w2v.bin', binary=True)
+    # word2vec_pubmed_model = Word2Vec.load("word2vec_pubmed.model")
+except FileNotFoundError:
+    print('No such model file')
+
+
+# %% change according to the final chosen word2vec model
+word2vec_chosen_model=word2vec_window_5_model
+word2vec_chosen_vector_size=200 if word2vec_chosen_model==word2vec_pubmed_model else 300
+word2vec_kmeans(args,word2vec_chosen_model, word2vec_chosen_vector_size,print_sentences=False,t_sne=True)
+
+
+
+# %% RNN
+
+args.doc.train.make_word2vec_for_rnn(args)
+args.doc.validation.make_word2vec_for_rnn(args)
+args.doc.test.make_word2vec_for_rnn(args)
+
 
 rnn = RNN(args.vec_size, args.hidden, len(args.doc.train.labels_dict))
 criterion = nn.NLLLoss(weight=args.doc.train.weights)
 optimizer = torch.optim.SGD(rnn.parameters(), lr=args.lr)
 
+init_rnn(args,n_iters=1000)
 
-init_rnn(n_iters=100000)
-#torch.save(rnn.state_dict(),'rnn_model.pth')
-#rnn = RNN(args.vec_size, args.hidden, len(args.doc.train.labels_dict))
-#rnn.load_state_dict(torch.load('rnn_model.pth'))
-#rnn.eval()
-#predict(args,embbedings_model)
-
-#%%
-tfidf_centroids = tfidf_kmeans(args,t_sne=True)
-word2vec_centroids=word2vec_kmeans(args,t_sne=True)
-word2vec_pubmed_centroids=word2vec_pubmed_kmeans(args,t_sne=True)
-
-# %% change according to the final chosen word2vec model
-word2vec_chosen_params=(0,5)
+torch.save(rnn.state_dict(),'rnn_model.pth')
+rnn = RNN(args.vec_size, args.hidden, len(args.doc.train.labels_dict))
+rnn.load_state_dict(torch.load('rnn_model.pth'))
+rnn.eval()
+predict_rnn(args)

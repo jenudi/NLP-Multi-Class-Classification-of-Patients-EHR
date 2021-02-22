@@ -7,6 +7,8 @@ from nltk.corpus import stopwords
 import pandas as pd
 import torch
 from itertools import groupby
+from gensim.models.word2vec import Word2Vec
+
 
 
 class NLPargs:
@@ -16,7 +18,6 @@ class NLPargs:
         self.min = min
         self.random = random
         self.windows = [3, 5]
-        self.hyperp_lambdas = [0, 0.5, 1]
         self.vec_size = vec_size
         self.hidden = hidden
         self.doc = None
@@ -116,30 +117,11 @@ class Document_set:
         self.lexicon = list()
         self.tfidf = list()
         self.tfidf_clusters=list()
-        self.word2vec = dict()
+        self.word2vec_for_kmeans = list()
         self.word2vec_clusters = dict()
-        self.word2vec_pubmed = dict()
-        self.word2vec_pubmed_clusters = dict()
+        self.word2vec_for_rnn=list()
         self.labels_dict = dict()
         self.weights = list()
-
-        self.word2vec_3 = None
-
-    def make_embbedings(self,window,model):
-        train_tokens = args.doc.train.get_sentences_tokens()
-        word2vec_model = Word2Vec(min_count=args.min, window=5, size=args.vec_size,
-                                  sample=1e-3, alpha=0.03, min_alpha=0.0007)
-        word2vec_model.build_vocab(train_tokens)
-        word2vec_model.train(train_tokens, total_examples=word2vec_model.corpus_count, epochs=30)
-        self.word2vec_3 = word2vec_model
-
-
-    def make_labels_dict_and_weights(self):
-        temp_list = [i.label for i in self.sentences]
-        cls_w = np.array([len(list(group)) for key, group in groupby(temp_list)])
-        cls_numbers = [list(dict.fromkeys(temp_list)).index(i) for i in temp_list]
-        self.labels_dict = dict(zip( range(len(set(cls_numbers)))  , list(dict.fromkeys(temp_list))   ))
-        self.weights = torch.FloatTensor(1 - (cls_w / sum(cls_w)))
 
     def get_sentences(self):
         return [sentence.text for sentence in self.sentences]
@@ -165,21 +147,38 @@ class Document_set:
     def make_tfidf(self,model):
         self.tfidf = model.transform(self.get_sentences()).todense()
 
-    def make_word2vec(self,word2vec_model,hyperparameter_lambda,hyperparameter_window_size):
-        self.word2vec[(hyperparameter_lambda,hyperparameter_window_size)]=list()
+    def make_word2vec_for_kmeans(self,word2vec_model, vector_size):
         for sentence_tokens in self.get_sentences_tokens():
             word_embeddings = np.mean([word2vec_model.wv[token] if token in word2vec_model.wv.vocab.keys()
-                                   else np.zeros(300) for token in sentence_tokens],axis=0)
-            word_embeddings *= (len(sentence_tokens) ** hyperparameter_lambda)
-            self.word2vec[(hyperparameter_lambda, hyperparameter_window_size)].append(word_embeddings /
-                                                                                      np.linalg.norm(word_embeddings))
-    def make_word2vec_pubmed(self,word2vec_pubmed_model,hyperparameter_lambda):
-        self.word2vec_pubmed[hyperparameter_lambda]=list()
-        for sentence_tokens in self.get_original_text_sentences_tokens():
-            word_embeddings = np.mean([word2vec_pubmed_model.wv[token] if token in word2vec_pubmed_model.wv.vocab.keys()
-                                       else np.zeros(200) for token in sentence_tokens], axis=0)
-            word_embeddings *= (len(sentence_tokens) ** hyperparameter_lambda)
-            self.word2vec_pubmed[hyperparameter_lambda].append(word_embeddings / np.linalg.norm(word_embeddings))
+                                   else np.zeros(vector_size) for token in sentence_tokens],axis=0)
+            self.word2vec_for_kmeans.append(word_embeddings /np.linalg.norm(word_embeddings))
+
+    def make_word2vec_for_rnn(self,args):
+
+        labels = [sentence.label for sentence in self.sentences]
+        cls_w = np.array([len(list(group)) for key, group in groupby(labels)])
+        cls_numbers = [list(dict.fromkeys(labels)).index(i) for i in labels]
+        self.labels_dict = dict(zip( range(len(set(cls_numbers)))  , list(dict.fromkeys(labels))   ))
+        self.weights = torch.FloatTensor(1 - (cls_w / sum(cls_w)))
+
+        train_tokens = self.get_sentences_tokens()
+        word2vec_model = Word2Vec(min_count=args.min, window=5, size=args.vec_size,
+                                  sample=1e-3, alpha=0.03, min_alpha=0.0007)
+        word2vec_model.build_vocab(train_tokens)
+        word2vec_model.train(train_tokens, total_examples=word2vec_model.corpus_count, epochs=30)
+        self.word2vec_for_rnn = word2vec_model
+
+    def make_random_sample_for_rnn(self,model):
+        index = random.randrange(0, len(self.sentences))
+        tokens = self.get_sentences_tokens()[index]
+        label = self.sentences[index].label
+        sentence = self.get_original_sentences()[index]
+        input_tensor = torch.zeros(len(tokens), 1, 300)
+        position = list(self.labels_dict.values()).index(label)
+        for i, v in enumerate(tokens):
+            numpy_copy = model.wv[v].copy()
+            input_tensor[i][0][:] = torch.from_numpy(numpy_copy)
+        return label, sentence, input_tensor, list(self.labels_dict.keys())[position]
 
     def clusters_to_sentences_indexes_dict(self,clusters,num_of_clusters):
         clusters_sentences_indexes_dict=dict()

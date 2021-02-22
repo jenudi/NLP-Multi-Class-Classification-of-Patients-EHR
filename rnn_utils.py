@@ -2,7 +2,7 @@ import random
 from gensim.models.word2vec import Word2Vec
 import torch
 
-
+'''
 def make_embbedings(args):
     train_tokens = args.doc.train.get_sentences_tokens()
     word2vec_model = Word2Vec(min_count=args.min, window=5, size=args.vec_size,
@@ -38,4 +38,5 @@ def make_random_sample_val(args,model):
         input_tensor[i][0][:] = torch.from_numpy(numpy_copy)
     return label, sentence,input_tensor #, list(args.doc.val.labels_dict.keys())[position]
 
+'''
 
