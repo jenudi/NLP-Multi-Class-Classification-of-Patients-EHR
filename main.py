@@ -9,7 +9,7 @@ from gensim.models.keyedvectors import KeyedVectors
 from matplotlib import pyplot as plt
 from sklearn.manifold import TSNE
 import seaborn as sns
-
+from sklearn.ensemble import RandomForestClassifier
 
 
 sns.set(rc={'figure.figsize': (11.7, 8.27)}, style="darkgrid")
@@ -123,7 +123,7 @@ def init_rnn(args,n_iters=100000):
         label, sentence,input_tensor, cls_numbers = args.doc.train.make_random_sample_for_rnn(model)
         cls_numbers = torch.tensor(cls_numbers)
         cls_n = torch.reshape(cls_numbers, (-1,))
-        output, loss = train(input_tensor, cls_n)
+        output, loss = train_rnn(input_tensor, cls_n)
         current_loss += loss
         print(f"index: {i}, loss: {loss}")
         if (i + 1) % plot_steps == 0:
@@ -222,14 +222,21 @@ def word2vec_kmeans(args,word2vec_model, vector_size,print_sentences=False,t_sne
     return word2vec_centroids
 
 
-#%%
 
 args = NLPargs(k=30, min=0.0, random=0, vec_size=300, hidden=350,min_cls=5, lr=0.0005)
 args.doc = init_classes(args.min_cls)
 
 
-#%%
+#%%TFIDF
 tfidf_centroids = tfidf_kmeans(args,print_sentences=False,t_sne=True)
+
+#%% random forest
+
+random_forest = RandomForestClassifier(max_depth=2, random_state=0)
+random_forest.fit()
+
+
+#%% word2vec
 
 word2vec_window_3_model = Word2Vec(min_count=args.min,
                                    window=3,
@@ -260,7 +267,6 @@ word2vec_kmeans(args,word2vec_chosen_model, word2vec_chosen_vector_size,print_se
 
 
 # %% RNN
-
 args.doc.train.make_word2vec_for_rnn(args)
 args.doc.validation.make_word2vec_for_rnn(args)
 args.doc.test.make_word2vec_for_rnn(args)
