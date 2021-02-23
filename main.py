@@ -61,34 +61,23 @@ def preprocess_data(data):
 
 
 #%% initializing NLP arguments and data
-NLP_project_args = NLP_args(k=30, min=0.0, random=0, vec_size=300, hidden=350,min_cls=5, lr=0.0005)
+args = NLP_args(k=30, min=0.0, random=0, vec_size=300, hidden=350,min_cls=5, lr=0.0005)
 data = make_data(threshold_for_dropping=0)
 document=preprocess_data(data)
 
 
 #%% word2vec kmeans
-word2vec_window_3_model = Word2Vec(min_count=NLP_project_args.min,
-                                   window=3,
-                                   size=NLP_project_args.vec_size,
-                                   sample=1e-3,
-                                   alpha=0.03,
-                                   min_alpha=0.0007)
 
-word2vec_window_5_model = Word2Vec(min_count=NLP_project_args.min,
+word2vec_window_5_model = Word2Vec(min_count=args.min,
                                    window=5,
-                                   size=NLP_project_args.vec_size,
+                                   size=args.vec_size,
                                    sample=1e-3,
                                    alpha=0.03,
                                    min_alpha=0.0007)
 
-try:
-    word2vec_pubmed_model = KeyedVectors.load_word2vec_format('PubMed-w2v.bin', binary=True)
-    # word2vec_pubmed_model = Word2Vec.load("word2vec_pubmed.model")
-except FileNotFoundError:
-    print('word2vec_pubmed_model Not file not found')
 
 word2vec_chosen_model=word2vec_window_5_model
-word2vec_chosen_vector_size=200 if word2vec_chosen_model==word2vec_pubmed_model else NLP_project_args.vec_size
+word2vec_chosen_vector_size= args.vec_size
 
 filename = "word2vec_model.sav"
 pickle.dump(word2vec_chosen_model, open(filename, "wb"))
@@ -96,18 +85,22 @@ pickle.dump(word2vec_chosen_model, open(filename, "wb"))
 train_tokens = document.train.get_sentences_tokens()
 word2vec_chosen_model.build_vocab(train_tokens)
 word2vec_chosen_model.train(train_tokens, total_examples=word2vec_chosen_model.corpus_count, epochs=30)
-word2vec_centroids=word2vec_kmeans(document,NLP_project_args,word2vec_chosen_model, word2vec_chosen_vector_size)
+word2vec_centroids=word2vec_kmeans(document,args,word2vec_chosen_model, word2vec_chosen_vector_size)
 
 
 # %% RNN classification
-document.train.make_word2vec_for_rnn(NLP_project_args)
-document.validation.make_word2vec_for_rnn(NLP_project_args)
-document.test.make_word2vec_for_rnn(NLP_project_args)
+
+eval_best_rnn_model(args,document)
+
+'''
+document.train.make_word2vec_for_rnn(word2vec_chosen_model)
+document.validation.make_word2vec_for_rnn(word2vec_chosen_model)
+document.test.make_word2vec_for_rnn(word2vec_chosen_model)
 
 
-rnn_model = RNN(NLP_project_args.vec_size, NLP_project_args.hidden, len(document.train.labels_dict))
+rnn_model = RNN(args.vec_size, args.hidden, len(document.train.labels_dict))
 criterion = nn.NLLLoss(weight=document.train.weights)
-optimizer = torch.optim.SGD(rnn_model.parameters(), lr=NLP_project_args.lr)
+optimizer = torch.optim.SGD(rnn_model.parameters(), lr=args.lr)
 
 init_rnn(rnn_model,criterion,optimizer,document,n_iters=100000)
 
@@ -115,7 +108,7 @@ torch.save(rnn_model.state_dict(),'rnn_model.pth')
 rnn_model.load_state_dict(torch.load('rnn_model.pth'))
 rnn_model.eval()
 predict_rnn(document,rnn_model)
-
+'''
 
 #%%TF-IDF kmeans
 random.shuffle(document.train.sentences)
@@ -123,9 +116,9 @@ random.shuffle(document.test.sentences)
 random.shuffle(document.validation.sentences)
 
 
-tfidf_model = TfidfVectorizer(min_df=NLP_project_args.min,smooth_idf=True,norm='l1')
+tfidf_model = TfidfVectorizer(min_df=args.min,smooth_idf=True,norm='l1')
 tfidf_trained = tfidf_model.fit(document.train.get_sentences())
-tfidf_centroids = tfidf_kmeans(document,NLP_project_args,tfidf_model)
+tfidf_centroids = tfidf_kmeans(document,args,tfidf_model)
 
 filename = "tfidf_model.sav"
 pickle.dump(tfidf_model, open(filename, "wb"))

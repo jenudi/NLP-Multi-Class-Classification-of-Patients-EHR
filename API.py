@@ -51,9 +51,7 @@ def word2vec_cluster(sentence,word2vec_model,vector_size,stopword_set):
     returned_cluster_labels=cluster_query[0]["most_common_labels"]
     returned_sentences_indexes=np.random.randint(len(cluster_query[0]["sentences in cluster"]),size=(1,10))
 
-    example_sentences=[cluster_query[0]["sentences in cluster"][index] for index in returned_sentences_indexes]
-
-    return jsonify({"cluster's returned_cluster_labels":returned_cluster_labels, "example sentences":example_sentences})
+    returned_sentences_ids = [cluster_query[0]["sentences in cluster"][index] for index in returned_sentences_indexes]
 
 
 @app.route("/tfidf_cluster/<str:sentence>")
@@ -76,9 +74,7 @@ def tfidf_cluster(sentence,tfidf_model,stopword_set):
     returned_cluster_labels=cluster_query[0]["most_common_labels"]
     returned_sentences_indexes=np.random.randint(len(cluster_query[0]["sentences in cluster"]),size=(1,10))
 
-    returned_sentences=[cluster_query[0]["sentences in cluster"][index] for index in returned_sentences_indexes]
-
-    return jsonify({"cluster's returned_cluster_labels":returned_cluster_labels, "example sentences":example_sentences})
+    returned_sentences_ids = [cluster_query[0]["sentences in cluster"][index] for index in returned_sentences_indexes]
 
 
 @app.route("/word2vec_rnn_classification/<str:sentence>")

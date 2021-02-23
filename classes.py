@@ -8,6 +8,8 @@ import pandas as pd
 import torch
 from itertools import groupby
 from gensim.models.word2vec import Word2Vec
+from gensim.models.keyedvectors import KeyedVectors
+
 
 
 
@@ -152,32 +154,47 @@ class Document_set:
                                    else np.zeros(vector_size) for token in sentence_tokens],axis=0)
             self.word2vec_for_kmeans.append(word_embeddings /np.linalg.norm(word_embeddings))
 
-    def make_word2vec_for_rnn(self,args):
-
+    def make_word2vec_for_rnn(self,args, window=None):
         labels = [sentence.label for sentence in self.sentences]
         cls_w = np.array([len(list(group)) for key, group in groupby(labels)])
         cls_numbers = [list(dict.fromkeys(labels)).index(i) for i in labels]
         self.labels_dict = dict(zip( range(len(set(cls_numbers)))  , list(dict.fromkeys(labels))   ))
         self.weights = torch.FloatTensor(1 - (cls_w / sum(cls_w)))
-
         train_tokens = self.get_sentences_tokens()
-        word2vec_model = Word2Vec(min_count=args.min, window=5, size=args.vec_size,
-                                  sample=1e-3, alpha=0.03, min_alpha=0.0007)
-        word2vec_model.build_vocab(train_tokens)
-        word2vec_model.train(train_tokens, total_examples=word2vec_model.corpus_count, epochs=30)
+        if window is not None:
+            word2vec_model = Word2Vec(min_count=args.min, window=window, size=args.vec_size,
+                                      sample=1e-3, alpha=0.03, min_alpha=0.0007)
+            word2vec_model.build_vocab(train_tokens)
+            word2vec_model.train(train_tokens, total_examples=word2vec_model.corpus_count, epochs=30)
+        else:
+            try:
+                word2vec_model = KeyedVectors.load_word2vec_format('PubMed-w2v.bin', binary=True)
+                # word2vec_pubmed_model = Word2Vec.load("word2vec_pubmed.model")
+            except FileNotFoundError:
+                print('No such model file')
+                return
         self.word2vec_for_rnn = word2vec_model
 
-    def make_random_sample_for_rnn(self,model):
+    def make_random_sample_for_rnn(self,model,model_name):
         index = random.randrange(0, len(self.sentences))
         tokens = self.get_sentences_tokens()[index]
         label = self.sentences[index].label
         sentence = self.get_original_sentences()[index]
-        input_tensor = torch.zeros(len(tokens), 1, 300)
+        if model_name == 'w2v_p':
+            input_tensor = torch.zeros(len(tokens), 1, 200)
+        else:
+            input_tensor = torch.zeros(len(tokens), 1, 300)
         position = list(self.labels_dict.values()).index(label)
         for i, v in enumerate(tokens):
-            numpy_copy = model.wv[v].copy()
+            try:
+                numpy_copy = model.wv[v].copy()
+            except KeyError:
+                if model_name == 'w2v_p':
+                    numpy_copy = np.zeros(200)
+                else:
+                    numpy_copy = np.zeros(300)
             input_tensor[i][0][:] = torch.from_numpy(numpy_copy)
-        return label, sentence, input_tensor, list(self.labels_dict.keys())[position]
+        return label, input_tensor, list(self.labels_dict.keys())[position]
 
     def clusters_to_sentences_indexes_dict(self,clusters,num_of_clusters):
         clusters_sentences_indexes_dict=dict()
