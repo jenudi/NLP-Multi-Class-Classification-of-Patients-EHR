@@ -11,7 +11,7 @@ from gensim.models.word2vec import Word2Vec
 
 
 
-class NLPargs:
+class NLP_args:
 
     def __init__(self, k=30, min=0.0, random=0, vec_size=300, hidden=128,min_cls=5, lr=0.005):
         self.k = k
@@ -20,7 +20,6 @@ class NLPargs:
         self.windows = [3, 5]
         self.vec_size = vec_size
         self.hidden = hidden
-        self.doc = None
         self.min_cls = min_cls
         self.lr = lr
 

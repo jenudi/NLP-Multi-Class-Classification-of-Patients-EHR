@@ -2,6 +2,7 @@
 
 from classes import *
 from RNN import *
+from kmeans import *
 from sklearn.feature_extraction.text import TfidfVectorizer
 from gensim.models.word2vec import Word2Vec
 from sklearn.cluster import KMeans
@@ -10,16 +11,10 @@ from matplotlib import pyplot as plt
 from sklearn.manifold import TSNE
 import seaborn as sns
 from sklearn.ensemble import RandomForestClassifier
+import random
 
 
 sns.set(rc={'figure.figsize': (11.7, 8.27)}, style="darkgrid")
-
-
-# %% Initialization
-def init_classes(threshold=0):
-    data = make_data(threshold)
-    return make_preprocess(data)
-
 
 def make_data(threshold_for_dropping=0):
     encounter_data = pd.read_csv("encounter.csv").rename(str.lower, axis='columns')
@@ -34,13 +29,12 @@ def make_data(threshold_for_dropping=0):
                      if temp_dict[rare_labels] <= threshold_for_dropping]
         data.drop(temp_list, inplace=True)
         data.reset_index(drop=True, inplace=True)
-
     data.sort_values('cc',inplace=True)
     data.reset_index(drop=True, inplace=True)
     return data
 
 
-def make_preprocess(data):
+def preprocess_data(data):
     soap = data['soap_note']
     soap_temp = [re.split('o:''|''o :', i) for i in soap]  # split by "o:" or "o :"
     temp_sentences = [i[0].strip().strip('s:').lower() for i in soap_temp]
@@ -61,193 +55,27 @@ def make_preprocess(data):
         sentence.text = ' '.join(sentence.tokens)
     document.train_test_split()
     document.train.make_lexicon()
-    print('Classes are ready to use.')
+    print('Classes are ready to use\n')
     return document
 
 
-def print_sentences_by_clusters(args, clusters_dict, validation_predict):
-    for key in clusters_dict.keys():
-        if key in validation_predict:
-            validation_sentences_indexes_in_cluster = [index for index, value in enumerate(validation_predict) if
-                                                       value == key]
-            print(
-                f'Validation sentences in cluster number {key + 1}, number of sentences: {len(validation_sentences_indexes_in_cluster)}\n')
-            for sentence_index in validation_sentences_indexes_in_cluster:
-                print(args.doc.test.get_original_sentences()[sentence_index])
-        else:
-            print(f'No validation sentences in cluster number {key + 1}\n')
-        print('\n')
-        print(f'Train sentences in cluster number {key + 1}, size of cluster: {len(clusters_dict[key])} \n')
-        sentences_printed = 0
-        for index in clusters_dict[key]:
-            print(args.doc.train.get_original_sentences()[index])
-            sentences_printed += 1
-            if sentences_printed > 15:
-                break
-        print('\n')
-        print('\n')
-
-
-def make_tsne(model, model_name, labels):
-    fig = plt.figure()
-    tsne = TSNE()
-    palette = sns.color_palette("icefire", len(set(labels)))
-    model_tsne_embedded = tsne.fit_transform(model)
-    temp_df = pd.DataFrame({'x1':model_tsne_embedded[:, 0],'x2':model_tsne_embedded[:, 1],'y':labels})
-    centers = temp_df.groupby(by=["y"]).mean()
-    sns.scatterplot(x=model_tsne_embedded[:, 0], y=model_tsne_embedded[:, 1], legend='full', palette=palette, hue=labels)
-    plt.scatter(centers.iloc[:,0].values, centers.iloc[:,1].values, c=palette, s=200, alpha=0.5)
-    fig.suptitle(f'Model: {model_name}', fontsize=16)
-    plt.show()
-
-
-def train_rnn(input_tensor, cls_numbers):
-    rnn.train()
-    hidden = rnn.init_hidden()
-    output = None
-    for i in range(input_tensor.size()[0]):
-        output, hidden = rnn(input_tensor[i], hidden)
-    loss = criterion(output, cls_numbers)
-    optimizer.zero_grad()
-    loss.backward()
-    optimizer.step()
-    return output, loss.item()
-
-
-def init_rnn(args,n_iters=100000):
-    current_loss = 0
-    all_losses = []
-    plot_steps, print_steps = 1000, 5000
-    model=args.doc.train.word2vec_for_rnn
-    for i in range(n_iters):
-        label, sentence,input_tensor, cls_numbers = args.doc.train.make_random_sample_for_rnn(model)
-        cls_numbers = torch.tensor(cls_numbers)
-        cls_n = torch.reshape(cls_numbers, (-1,))
-        output, loss = train_rnn(input_tensor, cls_n)
-        current_loss += loss
-        print(f"index: {i}, loss: {loss}")
-        if (i + 1) % plot_steps == 0:
-            all_losses.append(current_loss / plot_steps)
-            current_loss = 0
-        if (i + 1) % print_steps == 0:
-            guess = args.doc.train.labels_dict[int(torch.max(output, 1)[1].detach())]
-            correct = "CORRECT" if guess == label else f"WRONG ({label})"
-            print(f"{i + 1} {(i + 1) / n_iters * 100} {loss:.4f} {sentence} / {guess} {correct}")
-
-    plt.figure()
-    plt.plot(all_losses)
-    plt.show()
-    torch.save(rnn.state_dict(), 'rnn_model.pth')
-
-
-def predict_rnn(args,predicted_set='val'):
-    model=args.doc.train.word2vec_for_rnn
-    if predicted_set=='val':
-        label, sentence,input_tensor,cls_numbers = args.doc.validation.make_random_sample_for_rnn(model)
-    else:
-        label, sentence, input_tensor,cls_numbers = args.doc.test.make_random_sample_for_rnn(model)
-    print(f"\n> {sentence}")
-    with torch.no_grad():
-        hidden = rnn.init_hidden()
-        for i in range(input_tensor.size()[0]):
-            output, hidden = rnn(input_tensor[i], hidden)
-        guess = args.doc.train.labels_dict[int(torch.max(output, 1)[1].detach())]
-        print(guess)
-
-
-
-# %% TF-IDF
-def tfidf_kmeans(args, print_sentences=False, t_sne=False):
-    tfidf_model = TfidfVectorizer(min_df=args.min,
-                                  smooth_idf=True,
-                                  norm='l1')
-
-    tfidf_trained = tfidf_model.fit(args.doc.train.get_sentences())
-
-    args.doc.train.make_tfidf(tfidf_trained)
-    args.doc.validation.make_tfidf(tfidf_trained)
-    args.doc.test.make_tfidf(tfidf_trained)
-
-    kmeans_tfidf_model = KMeans(n_clusters=args.k,
-                                random_state=args.random).fit(args.doc.train.tfidf)
-
-    args.doc.train.tfidf_clusters = kmeans_tfidf_model.labels_
-    args.doc.validation.tfidf_clusters = kmeans_tfidf_model.predict(args.doc.validation.tfidf)
-    args.doc.test.tfidf_clusters = kmeans_tfidf_model.predict(args.doc.test.tfidf)
-
-    tfidf_clusters_dict = args.doc.train.clusters_to_sentences_indexes_dict(args.doc.train.tfidf_clusters,args.k)
-
-    if print_sentences:
-        print(f'Clusters number = {args.k}\n')
-        print_sentences_by_clusters(args, tfidf_clusters_dict,
-                                    args.doc.test.tfidf_clusters)
-        if t_sne:
-            make_tsne(args.doc.train.tfidf, 'TF-IDF', args.doc.train.tfidf_clusters)
-
-    return kmeans_tfidf_model.cluster_centers_
-
-
-# %% Word2Vec
-def word2vec_kmeans(args,word2vec_model, vector_size,print_sentences=False,t_sne=False):
-    # train_tokens.append(['un-known'])
-
-    train_tokens = args.doc.train.get_sentences_tokens()
-
-    word2vec_model.build_vocab(train_tokens)
-
-    word2vec_model.train(train_tokens,total_examples=word2vec_model.corpus_count,epochs=30)
-
-    args.doc.train.make_word2vec_for_kmeans(word2vec_model, vector_size)
-    args.doc.validation.make_word2vec_for_kmeans(word2vec_model, vector_size)
-    args.doc.test.make_word2vec_for_kmeans(word2vec_model, vector_size)
-
-    word2vec_for_kmeans_model = KMeans(n_clusters=args.k,
-                                   random_state=args.random).fit(args.doc.train.word2vec_for_kmeans)
-
-    word2vec_centroids = word2vec_for_kmeans_model.cluster_centers_
-
-    args.doc.train.word2vec_clusters = word2vec_for_kmeans_model.labels_
-    args.doc.validation.word2vec_clusters = word2vec_for_kmeans_model.predict(args.doc.validation.word2vec_for_kmeans)
-    args.doc.test.word2vec_clusters = word2vec_for_kmeans_model.predict(args.doc.test.word2vec_for_kmeans)
-
-
-    if print_sentences:
-        print(f'Clusters number = {args.k}')
-        word2vec_clusters_dict = args.doc.train.clusters_to_sentences_indexes_dict(args.doc.train.word2vec_clusters,
-                                                                                   args.k)
-        print_sentences_by_clusters(args, word2vec_clusters_dict,args.doc.test.word2vec_clusters)
-    if t_sne:
-        make_tsne(args.doc.train.word2vec_for_kmeans, 'Word2Vec',args.doc.train.word2vec_clusters)
-
-    return word2vec_centroids
-
-
-
-args = NLPargs(k=30, min=0.0, random=0, vec_size=300, hidden=350,min_cls=5, lr=0.0005)
-args.doc = init_classes(args.min_cls)
-
-
-#%%TFIDF
-tfidf_centroids = tfidf_kmeans(args,print_sentences=False,t_sne=True)
-
-#%% random forest
-
-random_forest = RandomForestClassifier(max_depth=2, random_state=0)
-random_forest.fit()
+#%% initializing NLP arguments and data
+NLP_project_args = NLP_args(k=30, min=0.0, random=0, vec_size=300, hidden=350,min_cls=5, lr=0.0005)
+data = make_data(threshold_for_dropping=0)
+document=preprocess_data(data)
 
 
 #%% word2vec
-
-word2vec_window_3_model = Word2Vec(min_count=args.min,
+word2vec_window_3_model = Word2Vec(min_count=NLP_project_args.min,
                                    window=3,
-                                   size=args.vec_size,
+                                   size=NLP_project_args.vec_size,
                                    sample=1e-3,
                                    alpha=0.03,
                                    min_alpha=0.0007)
 
-word2vec_window_5_model = Word2Vec(min_count=args.min,
+word2vec_window_5_model = Word2Vec(min_count=NLP_project_args.min,
                                    window=5,
-                                   size=args.vec_size,
+                                   size=NLP_project_args.vec_size,
                                    sample=1e-3,
                                    alpha=0.03,
                                    min_alpha=0.0007)
@@ -256,30 +84,59 @@ try:
     word2vec_pubmed_model = KeyedVectors.load_word2vec_format('PubMed-w2v.bin', binary=True)
     # word2vec_pubmed_model = Word2Vec.load("word2vec_pubmed.model")
 except FileNotFoundError:
-    print('No such model file')
+    print('word2vec_pubmed_model Not file not found')
 
-
-# %% change according to the final chosen word2vec model
 word2vec_chosen_model=word2vec_window_5_model
-word2vec_chosen_vector_size=200 if word2vec_chosen_model==word2vec_pubmed_model else 300
-word2vec_kmeans(args,word2vec_chosen_model, word2vec_chosen_vector_size,print_sentences=False,t_sne=True)
+word2vec_chosen_vector_size=200 if word2vec_chosen_model==word2vec_pubmed_model else NLP_project_args.vec_size
 
+
+train_tokens = document.train.get_sentences_tokens()
+word2vec_chosen_model.build_vocab(train_tokens)
+word2vec_chosen_model.train(train_tokens, total_examples=word2vec_chosen_model.corpus_count, epochs=30)
+word2vec_centroids=word2vec_kmeans(document,NLP_project_args,word2vec_chosen_model, word2vec_chosen_vector_size)
 
 
 # %% RNN
-args.doc.train.make_word2vec_for_rnn(args)
-args.doc.validation.make_word2vec_for_rnn(args)
-args.doc.test.make_word2vec_for_rnn(args)
+document.train.make_word2vec_for_rnn(NLP_project_args)
+document.validation.make_word2vec_for_rnn(NLP_project_args)
+document.test.make_word2vec_for_rnn(NLP_project_args)
 
 
-rnn = RNN(args.vec_size, args.hidden, len(args.doc.train.labels_dict))
-criterion = nn.NLLLoss(weight=args.doc.train.weights)
-optimizer = torch.optim.SGD(rnn.parameters(), lr=args.lr)
+rnn_model = RNN(NLP_project_args.vec_size, NLP_project_args.hidden, len(document.train.labels_dict))
+criterion = nn.NLLLoss(weight=document.train.weights)
+optimizer = torch.optim.SGD(rnn_model.parameters(), lr=NLP_project_args.lr)
 
-init_rnn(args,n_iters=1000)
+init_rnn(rnn_model,criterion,optimizer,document,n_iters=1000)
 
-torch.save(rnn.state_dict(),'rnn_model.pth')
-rnn = RNN(args.vec_size, args.hidden, len(args.doc.train.labels_dict))
-rnn.load_state_dict(torch.load('rnn_model.pth'))
-rnn.eval()
-predict_rnn(args)
+torch.save(rnn_model.state_dict(),'rnn_model.pth')
+rnn_model.load_state_dict(torch.load('rnn_model.pth'))
+rnn_model.eval()
+predict_rnn(document,rnn_model)
+
+
+#%%TF-IDF
+random.shuffle(document.train.sentences)
+random.shuffle(document.test.sentences)
+random.shuffle(document.validation.sentences)
+
+
+tfidf_model = TfidfVectorizer(min_df=NLP_project_args.min,smooth_idf=True,norm='l1')
+tfidf_trained = tfidf_model.fit(document.train.get_sentences())
+tfidf_centroids = tfidf_kmeans(document,NLP_project_args,tfidf_model)
+
+
+#%% random forest
+train_labels = [sentence.label for sentence in document.train.sentences]
+validation_labels = [sentence.label for sentence in document.validation.sentences]
+n_estimators_list=[10,100,200,300,400,500,1000]
+validation_scores=list()
+for n_estimators in n_estimators_list:
+    random_forest_model = RandomForestClassifier(n_estimators=n_estimators,criterion='gini',max_depth=None,bootstrap=True,random_state=0)
+    _ = random_forest_model.fit(document.train.tfidf,train_labels)
+    validation_score=random_forest_model.score(document.validation.tfidf,validation_labels)
+    validation_scores.append(validation_score)
+    print("Random forest with TF-IDF enbeddings score of n_estimator=" + str(n_estimators)+ " is " + str(validation_score))
+
+best_n_estimator=n_estimators_list[np.argmax(validation_scores)]
+random_forest_chosen_model=RandomForestClassifier(n_estimators=n_estimators,criterion='gini',max_depth=None,bootstrap=True,random_state=0)
+_ = random_forest_chosen_model.fit(document.train.tfidf, train_labels)
