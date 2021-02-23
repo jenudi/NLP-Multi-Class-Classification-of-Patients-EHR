@@ -8,15 +8,12 @@ from gensim.models.keyedvectors import KeyedVectors
 from main import word2vec_chosen_model, word2vec_chosen_vector_size, tfidf_model, random_forest_chosen_model
 
 
-def sentence_preprocess(sentence,stopword_set):
-    split_sentence = re.split('o:''|''o :', sentence)
-    preprocessed_sentence = Sentence_in_document(split_sentence[0].strip().strip('s:').lower())
-    preprocessed_sentence.do_replaces()
-    preprocessed_sentence.stem_and_check_stop(stopword_set)
-    preprocessed_sentence.make_tokens()
-    preprocessed_sentence.make_original_text_tokens()
-    preprocessed_sentence.text = ' '.join(sentence.tokens)
-    return preprocessed_sentence
+try:
+    _ = stopwords.words("english")
+except LookupError:
+    import nltk
+    nltk.download('stopwords')
+stopword_set = set(stopwords.words("english"))
 
 
 def find_closect_centroid(centroids_query,embeddings):
@@ -28,57 +25,60 @@ def find_closect_centroid(centroids_query,embeddings):
     min_centroid_index=np.argmin([distance[1] for distance in distances_list])
     return distances_list[min_centroid_index][0]
 
-try:
-    _ = stopwords.words("english")
-except LookupError:
-    import nltk
-    nltk.download('stopwords')
-stopword_set = set(stopwords.words("english"))
-
 
 app = Flask(__name__)
 
 
 @app.route("/word2vec_cluster/<str:sentence>")
-def word2vec_cluster(sentence,word2vec_model,vector_size):
+def word2vec_cluster(sentence,word2vec_model,vector_size,stopword_set):
 
     if sentence is None:
         return jsonify({"error":"no sentence"})
     elif not isinstance(sentence,str):
         return jsonify({"error":"value entered is not a string"})
 
-    try:
-        preprocessed_sentence = sentence_preprocess(sentence,stopword_set)
-    except:
-        return jsonify({"error: sentence could not be preprocessed"})
+    sentence_object = Sentence_in_document(sentence.strip().lower())
+    sentence_object.preprocess_sentence_for_API(stopword_set)
 
     word_embeddings = np.mean([word2vec_model.wv[word] if word in word2vec_model.wv.vocab.keys()
-                                else np.zeros(vector_size) for word in preprocessed_sentence], axis=0)
+                                else np.zeros(vector_size) for word in sentence_object.text], axis=0)
     normalized_embeddings= word_embeddings / np.linalg.norm(word_embeddings)
 
     centroids_query = word2vec_clusters_collection.find({}, {"centroid": 1, "_id": 0})
     closect_centroid=find_closect_centroid(centroids_query,normalized_embeddings)
-    cluster_query=word2vec_clusters_collection.find({"centroid":closect_centroid}, {"sentences in cluster": 1, "most common labels": 1, "centroid": 0, "_id": 0})
+    cluster_query=word2vec_clusters_collection.find({"centroid":closect_centroid}, {"sentences in cluster": 1, "most common labels": 1, "_id": 0})
+
+    returned_cluster_labels=cluster_query[0]["most_common_labels"]
+    returned_sentences_indexes=np.random.randint(len(cluster_query[0]["sentences in cluster"]),size=(1,10))
+
+    example_sentences=[cluster_query[0]["sentences in cluster"][index] for index in returned_sentences_indexes]
+
+    return jsonify({"cluster's returned_cluster_labels":returned_cluster_labels, "example sentences":example_sentences})
 
 
 @app.route("/tfidf_cluster/<str:sentence>")
-def tfidf_cluster(sentence,tfidf_model):
+def tfidf_cluster(sentence,tfidf_model,stopword_set):
 
     if sentence is None:
         return jsonify({"error": "no sentence"})
     elif not isinstance(sentence, str):
         return jsonify({"error": "value entered is not a string"})
 
-    try:
-        preprocessed_sentence = sentence_preprocess(sentence, stopword_set)
-    except:
-        return jsonify({"error: sentence could not be preprocessed"})
+    sentence_object = Sentence_in_document(sentence.strip().lower())
+    sentence_object.preprocess_sentence_for_API(stopword_set)
 
-    tfidf_embeddings=tfidf_model.transform(sentence).todense()
+    tfidf_embeddings=tfidf_model.transform(sentence_object.text).todense()
 
     centroids_query = tfidf_clusters_collection.find({}, {"centroid": 1, "_id": 0})
     closect_centroid=find_closect_centroid(centroids_query,tfidf_embeddings)
-    cluster_query=tfidf_clusters_collection.find({"centroid":closect_centroid}, {"sentences in cluster": 1, "most common labels": 1, "centroid": 0, "_id": 0})
+    cluster_query=tfidf_clusters_collection.find({"centroid":closect_centroid}, {"sentences in cluster": 1, "most common labels": 1, "_id": 0})
+
+    returned_cluster_labels=cluster_query[0]["most_common_labels"]
+    returned_sentences_indexes=np.random.randint(len(cluster_query[0]["sentences in cluster"]),size=(1,10))
+
+    returned_sentences=[cluster_query[0]["sentences in cluster"][index] for index in returned_sentences_indexes]
+
+    return jsonify({"cluster's returned_cluster_labels":returned_cluster_labels, "example sentences":example_sentences})
 
 
 @app.route("/word2vec_rnn_classification/<str:sentence>")
@@ -88,10 +88,8 @@ def word2vec_rnn_classification(sentence):
     elif not isinstance(sentence, str):
         return jsonify({"error": "value entered is not a string"})
 
-    try:
-        preprocessed_sentence = sentence_preprocess(sentence,stopword_set)
-    except:
-        return jsonify({"error: sentence could not be preprocessed"})
+    sentence_object = Sentence_in_document(sentence.strip().lower())
+    sentence_object.preprocess_sentence_for_API(stopword_set)
 
 
 @app.route("/tfidf_random_forest_classification/<str:sentence>")
@@ -101,10 +99,8 @@ def tfidf_random_forest_classification(sentence):
     elif not isinstance(sentence, str):
         return jsonify({"error": "value entered is not a string"})
 
-    try:
-        preprocessed_sentence = sentence_preprocess(sentence,stopword_set)
-    except:
-        return jsonify({"error: sentence could not be preprocessed"})
+    sentence_object = Sentence_in_document(sentence.strip().lower())
+    sentence_object.preprocess_sentence_for_API(stopword_set)
 
 
 if __name__ == "__main__":

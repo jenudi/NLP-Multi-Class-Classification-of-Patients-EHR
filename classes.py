@@ -206,6 +206,13 @@ class Sentence_in_document:
     def make_original_text_tokens(self):
         self.original_text_tokens = re.split(r'[-\s.,;!?]+', self.original_text)[:-1]
 
+    def preprocess_sentence_for_API(sentence, stopword_set):
+        sentence.do_replaces()
+        sentence.stem_and_check_stop(stopword_set)
+        sentence.make_tokens()
+        sentence.make_original_text_tokens()
+        sentence.text = ' '.join(sentence.tokens)
+
     def do_replaces(self):
         self.text = self.text.replace(r"'s", "  is")
         self.text = self.text.replace(r"'ve", " have")
