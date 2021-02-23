@@ -1,14 +1,14 @@
 from bson.son import SON
 from pymongo import MongoClient
 from collections import Counter
-from main import NLP_project_args, document, tfidf_centroids, word2vec_centroids
+from main import args, document, tfidf_centroids, word2vec_centroids
 
 
 sentences_list=list()
 tfidf_clusters_list=list()
 word2vec_clusters_list=list()
 
-for cluster_number in range(NLP_project_args.k):
+for cluster_number in range(args.k):
 
     tfidf_clusters_list.append(SON({"_id": cluster_number+1,
                                     "sentences in cluster": list(),
@@ -49,7 +49,7 @@ for set in [document.train, document.validation, document.test]:
         sentences_list.append(new_sentence_document)
 
 for cluster_list in [tfidf_clusters_list, word2vec_clusters_list]:
-    for cluster_number in range(NLP_project_args.k):
+    for cluster_number in range(args.k):
         counter=Counter(cluster_list[cluster_number]["most common labels"])
         if len(counter.most_common(3))>2:
             cluster_list[cluster_number]["most common labels"]=[count[0] for count in counter.most_common(3)]
@@ -57,7 +57,6 @@ for cluster_list in [tfidf_clusters_list, word2vec_clusters_list]:
             cluster_list[cluster_number]["most common labels"]=[count[0] for count in counter.most_common(2)]
         else:
             cluster_list[cluster_number]["most common labels"] =[counter.most_common(1)[0][0]]
-
 
 
 client = MongoClient('mongodb://localhost:27017/')

@@ -98,9 +98,11 @@ def init_rnn(args,document,model_name,n_iters=100000):
         if (iter + 1) % plot_steps == 0:
             all_losses.append(current_loss / plot_steps)
             current_loss = 0
+    '''
     plt.figure()
     plt.plot(all_losses)
     plt.show()
+     '''
     return rnn_model
 
 '''
@@ -175,4 +177,4 @@ def eval_best_rnn_model(args,document):
                 rnn_model = init_rnn(args,document,model,n_iters=100000)
                 check[f'y_pred {model} {learning_rate} {hidden_layer}'] = [val_rnn(document,model,val_sentence_index,rnn_model,val=True) for val_sentence_index in range(len(document.validation.sentences))]
                 print(check)
-    print('finished evaluating RNN models')
+    print('Finished evaluating RNN models')
