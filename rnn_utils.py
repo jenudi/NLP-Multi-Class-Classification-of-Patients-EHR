@@ -37,6 +37,5 @@ def make_random_sample_val(args,model):
         numpy_copy = model.wv[v].copy()
         input_tensor[i][0][:] = torch.from_numpy(numpy_copy)
     return label, sentence,input_tensor #, list(args.doc.val.labels_dict.keys())[position]
-
 '''
 

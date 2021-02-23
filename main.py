@@ -12,6 +12,7 @@ from sklearn.manifold import TSNE
 import seaborn as sns
 from sklearn.ensemble import RandomForestClassifier
 import random
+import pickle
 
 
 sns.set(rc={'figure.figsize': (11.7, 8.27)}, style="darkgrid")
@@ -65,7 +66,7 @@ data = make_data(threshold_for_dropping=0)
 document=preprocess_data(data)
 
 
-#%% word2vec
+#%% word2vec kmeans
 word2vec_window_3_model = Word2Vec(min_count=NLP_project_args.min,
                                    window=3,
                                    size=NLP_project_args.vec_size,
@@ -89,6 +90,8 @@ except FileNotFoundError:
 word2vec_chosen_model=word2vec_window_5_model
 word2vec_chosen_vector_size=200 if word2vec_chosen_model==word2vec_pubmed_model else NLP_project_args.vec_size
 
+filename = "word2vec_model.sav"
+pickle.dump(word2vec_chosen_model, open(filename, "wb"))
 
 train_tokens = document.train.get_sentences_tokens()
 word2vec_chosen_model.build_vocab(train_tokens)
@@ -96,7 +99,7 @@ word2vec_chosen_model.train(train_tokens, total_examples=word2vec_chosen_model.c
 word2vec_centroids=word2vec_kmeans(document,NLP_project_args,word2vec_chosen_model, word2vec_chosen_vector_size)
 
 
-# %% RNN
+# %% RNN classification
 document.train.make_word2vec_for_rnn(NLP_project_args)
 document.validation.make_word2vec_for_rnn(NLP_project_args)
 document.test.make_word2vec_for_rnn(NLP_project_args)
@@ -106,7 +109,7 @@ rnn_model = RNN(NLP_project_args.vec_size, NLP_project_args.hidden, len(document
 criterion = nn.NLLLoss(weight=document.train.weights)
 optimizer = torch.optim.SGD(rnn_model.parameters(), lr=NLP_project_args.lr)
 
-init_rnn(rnn_model,criterion,optimizer,document,n_iters=1000)
+init_rnn(rnn_model,criterion,optimizer,document,n_iters=100000)
 
 torch.save(rnn_model.state_dict(),'rnn_model.pth')
 rnn_model.load_state_dict(torch.load('rnn_model.pth'))
@@ -114,7 +117,7 @@ rnn_model.eval()
 predict_rnn(document,rnn_model)
 
 
-#%%TF-IDF
+#%%TF-IDF kmeans
 random.shuffle(document.train.sentences)
 random.shuffle(document.test.sentences)
 random.shuffle(document.validation.sentences)
@@ -124,8 +127,11 @@ tfidf_model = TfidfVectorizer(min_df=NLP_project_args.min,smooth_idf=True,norm='
 tfidf_trained = tfidf_model.fit(document.train.get_sentences())
 tfidf_centroids = tfidf_kmeans(document,NLP_project_args,tfidf_model)
 
+filename = "tfidf_model.sav"
+pickle.dump(tfidf_model, open(filename, "wb"))
 
-#%% random forest
+
+#%% random forest classification
 train_labels = [sentence.label for sentence in document.train.sentences]
 validation_labels = [sentence.label for sentence in document.validation.sentences]
 n_estimators_list=[10,100,200,300,400,500,1000]
@@ -140,3 +146,6 @@ for n_estimators in n_estimators_list:
 best_n_estimator=n_estimators_list[np.argmax(validation_scores)]
 random_forest_chosen_model=RandomForestClassifier(n_estimators=n_estimators,criterion='gini',max_depth=None,bootstrap=True,random_state=0)
 _ = random_forest_chosen_model.fit(document.train.tfidf, train_labels)
+
+filename = "random_forest_model.sav"
+pickle.dump(random_forest_chosen_model, open(filename, "wb"))
