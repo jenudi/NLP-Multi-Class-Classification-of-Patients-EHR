@@ -76,13 +76,13 @@ word2vec_for_kmeans_model = Word2Vec(min_count=args.min,
                                     alpha=0.03,
                                     min_alpha=0.0007)
 
-filename = "word2vec_model.sav"
-pickle.dump(word2vec_for_kmeans_model, open(filename, "wb"))
+filename = "word2vec_model.pkl"
+pickle.dump(word2vec_for_kmeans_model, open("word2vec_model.pkl", "wb"))
 
 train_tokens = document.train.get_sentences_tokens()
 word2vec_for_kmeans_model.build_vocab(train_tokens)
 word2vec_for_kmeans_model.train(train_tokens, total_examples=word2vec_for_kmeans_model.corpus_count, epochs=30)
-word2vec_centroids=word2vec_kmeans(document,args,word2vec_for_kmeans_model, word2vec_chosen_vector_size)
+word2vec_centroids=word2vec_kmeans(document,args,word2vec_for_kmeans_model, args.word2vec_vec_size_for_kmeans)
 
 
 # %% RNN classification
@@ -115,8 +115,7 @@ tfidf_model = TfidfVectorizer(min_df=args.min,smooth_idf=True,norm='l1')
 tfidf_trained = tfidf_model.fit(document.train.get_sentences())
 tfidf_centroids = tfidf_kmeans(document,args,tfidf_model)
 
-filename = "tfidf_model.sav"
-pickle.dump(tfidf_model, open(filename, "wb"))
+pickle.dump(tfidf_model, open("tfidf_model.pkl", "wb"))
 
 
 #%% random forest classification
@@ -135,5 +134,4 @@ best_n_estimator=n_estimators_list[np.argmax(validation_scores)]
 random_forest_chosen_model=RandomForestClassifier(n_estimators=n_estimators,criterion='gini',max_depth=None,bootstrap=True,random_state=0)
 _ = random_forest_chosen_model.fit(document.train.tfidf, train_labels)
 
-filename = "random_forest_model.sav"
-pickle.dump(random_forest_chosen_model, open(filename, "wb"))
+pickle.dump(random_forest_chosen_model, open("random_forest_model.pkl", "wb"))
