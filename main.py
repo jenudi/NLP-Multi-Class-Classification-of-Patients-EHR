@@ -84,7 +84,7 @@ word2vec_centroids=word2vec_kmeans(document,args,word2vec_for_kmeans_model, args
 
 
 # %% RNN classification
-#eval_best_rnn_model(args,document)
+eval_best_rnn_model(args,document)
 
 '''
 document.train.make_word2vec_for_rnn(word2vec_for_rnn_model)
