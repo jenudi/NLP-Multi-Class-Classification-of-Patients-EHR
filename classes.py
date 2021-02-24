@@ -15,15 +15,16 @@ from gensim.models.keyedvectors import KeyedVectors
 
 class NLP_args:
 
-    def __init__(self, k=30, min=0.0, random=0, vec_size=300, hidden=128,min_cls=5, lr=0.005):
+    def __init__(self, k=30, min=0.0, random=0, hidden=128,min_cls=5, lr=0.005):
         self.k = k
         self.min = min
         self.random = random
         self.windows = [3, 5]
-        self.vec_size = vec_size
         self.hidden = hidden
         self.min_cls = min_cls
         self.lr = lr
+        self.word2vec_vec_size_for_kmeans = None
+        self.word2vec_vec_size_for_rnn = None
 
 
 class Document:
@@ -158,10 +159,11 @@ class Document_set:
         labels = [sentence.label for sentence in self.sentences]
         cls_w = np.array([len(list(group)) for key, group in groupby(labels)])
         cls_numbers = [list(dict.fromkeys(labels)).index(i) for i in labels]
-        self.labels_dict = dict(zip( range(len(set(cls_numbers)))  , list(dict.fromkeys(labels))   ))
+        self.labels_dict = dict(zip( range(len(set(cls_numbers))), list(dict.fromkeys(labels) )))
         self.weights = torch.FloatTensor(1 - (cls_w / sum(cls_w)))
         train_tokens = self.get_sentences_tokens()
         if window is not None:
+            args.word2vec_vec_size_for_rnn=window
             word2vec_model = Word2Vec(min_count=args.min, window=window, size=args.vec_size,
                                       sample=1e-3, alpha=0.03, min_alpha=0.0007)
             word2vec_model.build_vocab(train_tokens)

@@ -67,36 +67,31 @@ document=preprocess_data(data)
 
 
 #%% word2vec kmeans
+args.word2vec_vec_size_for_kmeans= 300
 
-word2vec_window_5_model = Word2Vec(min_count=args.min,
-                                   window=5,
-                                   size=args.vec_size,
-                                   sample=1e-3,
-                                   alpha=0.03,
-                                   min_alpha=0.0007)
-
-
-word2vec_chosen_model=word2vec_window_5_model
-word2vec_chosen_vector_size= args.vec_size
+word2vec_for_kmeans_model = Word2Vec(min_count=args.min,
+                                    window=5,
+                                    size=args.word2vec_vec_size_for_kmeans,
+                                    sample=1e-3,
+                                    alpha=0.03,
+                                    min_alpha=0.0007)
 
 filename = "word2vec_model.sav"
-pickle.dump(word2vec_chosen_model, open(filename, "wb"))
+pickle.dump(word2vec_for_kmeans_model, open(filename, "wb"))
 
 train_tokens = document.train.get_sentences_tokens()
-word2vec_chosen_model.build_vocab(train_tokens)
-word2vec_chosen_model.train(train_tokens, total_examples=word2vec_chosen_model.corpus_count, epochs=30)
-word2vec_centroids=word2vec_kmeans(document,args,word2vec_chosen_model, word2vec_chosen_vector_size)
+word2vec_for_kmeans_model.build_vocab(train_tokens)
+word2vec_for_kmeans_model.train(train_tokens, total_examples=word2vec_for_kmeans_model.corpus_count, epochs=30)
+word2vec_centroids=word2vec_kmeans(document,args,word2vec_for_kmeans_model, word2vec_chosen_vector_size)
 
 
 # %% RNN classification
-
 eval_best_rnn_model(args,document)
 
 '''
-document.train.make_word2vec_for_rnn(word2vec_chosen_model)
-document.validation.make_word2vec_for_rnn(word2vec_chosen_model)
-document.test.make_word2vec_for_rnn(word2vec_chosen_model)
-
+document.train.make_word2vec_for_rnn(word2vec_for_rnn_model)
+document.validation.make_word2vec_for_rnn(word2vec_for_rnn_model)
+document.test.make_word2vec_for_rnn(word2vec_for_rnn_model)
 
 rnn_model = RNN(args.vec_size, args.hidden, len(document.train.labels_dict))
 criterion = nn.NLLLoss(weight=document.train.weights)

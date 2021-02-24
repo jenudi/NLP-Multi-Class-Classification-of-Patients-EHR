@@ -40,10 +40,10 @@ for set in [document.train, document.validation, document.test]:
 
         new_sentence_document=SON({
             "_id": sentence_id,
-            "original text": sentence.original_text,
+            "text": sentence.original_text,
             "label": sentence.label,
-            "tf-idf representetion": list(map(float,set.tfidf[index].tolist()[:][0])),
-            "word2vec representetion": list(map(float,set.word2vec_for_kmeans[index].tolist())),
+            "tf-idf embeddings": list(map(float,set.tfidf[index].tolist()[:][0])),
+            "word2vec embeddings": list(map(float,set.word2vec_for_kmeans[index].tolist())),
             })
 
         sentences_list.append(new_sentence_document)
