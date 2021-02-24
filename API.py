@@ -1,44 +1,21 @@
-from flask import Flask, request, jsonify
-from classes import *
-from DB import sentences_collection, tfidf_clusters_collection, word2vec_clusters_collection
-from main import word2vec_for_kmeans_model , tfidf_model, random_forest_chosen_model, document, args
-#from main word2vec_for_rnn_chosen_vector_size, rnn_model
-from sklearn.feature_extraction.text import TfidfVectorizer
-from gensim.models.word2vec import Word2Vec
-from sklearn.cluster import KMeans
-from gensim.models.keyedvectors import KeyedVectors
-from math import inf
-import torch
+from API_utils import *
 
 
-try:
-    _ = stopwords.words("english")
-except LookupError:
-    import nltk
-    nltk.download('stopwords')
-stopword_set = set(stopwords.words("english"))
+args = NLP_args(k=30, min=0.0, random=0, hidden=350,min_cls=5, lr=0.0005)
 
-def get_euclidiaan_distance(first_embeddings, second_embeddings):
-    return np.square(np.sum(np.square(first_embeddings - second_embeddings)))
-
-
-def find_closest_centroid(centroids_query,embeddings):
-    distances_list=list()
-    for centroid_dict in centroids_query:
-        centroid=centroid_dict["centroid"]
-        euclidiaan_distance=get_euclidiaan_distance(centroid, embeddings)
-        distances_list.append((centroid,euclidiaan_distance))
-    min_centroid_index=np.argmin([distance[1] for distance in distances_list])
-    return distances_list[min_centroid_index][0]
+word2vec_for_kmeans_model=pickle.load(open("word2vec_model.pkl", "rb"))
+tfidf_model=pickle.load(open("tfidf_model.pkl", "rb"))
+random_forest_model=pickle.load(open("random_forest_model.pkl", "rb"))
 
 
 app = Flask(__name__)
 
 
-@app.route("/word2vec_cluster/<str:sentence>")
-def word2vec_cluster(sentence ,stopword_set):
+@app.route("/word2vec_cluster",methods=["POST"])
+def word2vec_cluster():
 
-    if sentence is None:
+    sentence=request.form["sentence"]
+    if sentence is None or len(sentence)==0:
         return jsonify({"error":"no sentence"})
     elif not isinstance(sentence,str):
         return jsonify({"error":"value entered is not a string"})
@@ -70,9 +47,10 @@ def word2vec_cluster(sentence ,stopword_set):
     return jsonify({"most common labels in cluster":cluster_labels, "closest sentences in cluster":closest_sentences_texts})
 
 
-@app.route("/tfidf_cluster/<str:sentence>")
-def tfidf_cluster(sentence,stopword_set):
+@app.route("/tfidf_cluster",methods=["POST"])
+def tfidf_cluster():
 
+    sentence=request.form["sentence"]
     if sentence is None:
         return jsonify({"error": "no sentence"})
     elif not isinstance(sentence, str):
@@ -103,8 +81,10 @@ def tfidf_cluster(sentence,stopword_set):
     return jsonify({"most common labels in cluster": cluster_labels, "closest sentences in cluster": closest_sentences_texts})
 
 
-@app.route("/rnn_classification/<str:sentence>")
-def word2vec_rnn_classification(sentence):
+@app.route("/rnn_classification",methods=["POST"])
+def word2vec_rnn_classification():
+
+    sentence=request.form["sentence"]
     if sentence is None:
         return jsonify({"error": "no sentence"})
     elif not isinstance(sentence, str):
@@ -130,8 +110,10 @@ def word2vec_rnn_classification(sentence):
     '''
 
 
-@app.route("/random_forest_classification/<str:sentence>")
-def tfidf_random_forest_classification(sentence):
+@app.route("/random_forest_classification",methods=["POST"])
+def tfidf_random_forest_classification():
+
+    sentence=request.form["sentence"]
     if sentence is None:
         return jsonify({"error": "no sentence"})
     elif not isinstance(sentence, str):
@@ -142,9 +124,9 @@ def tfidf_random_forest_classification(sentence):
 
     tfidf_embeddings=tfidf_model.transform(sentence_object.text).todense()
 
-    predicted_label=random_forest_chosen_model.predict(tfidf_embeddings)
+    predicted_label=random_forest_model.predict(tfidf_embeddings)
     return jsonify({"predicted label":predicted_label})
 
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1.", port=8000)
+    app.run(debug=True)

@@ -15,7 +15,7 @@ from gensim.models.keyedvectors import KeyedVectors
 
 class NLP_args:
 
-    def __init__(self, k=30, min=0.0, random=0, hidden=128,min_cls=5, lr=0.005):
+    def __init__(self, k=30, min=0.0, random=0, hidden=128,min_cls=5, lr=0.005,word2vec_vec_size_for_kmeans=300,word2vec_vec_size_for_rnn=300):
         self.k = k
         self.min = min
         self.random = random
@@ -23,8 +23,8 @@ class NLP_args:
         self.hidden = hidden
         self.min_cls = min_cls
         self.lr = lr
-        self.word2vec_vec_size_for_kmeans = None
-        self.word2vec_vec_size_for_rnn = None
+        self.word2vec_vec_size_for_kmeans = word2vec_vec_size_for_kmeans
+        self.word2vec_vec_size_for_rnn = word2vec_vec_size_for_rnn
 
 
 class Document:

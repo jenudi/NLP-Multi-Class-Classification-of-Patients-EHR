@@ -61,13 +61,12 @@ def preprocess_data(data):
 
 
 #%% initializing NLP arguments and data
-args = NLP_args(k=30, min=0.0, random=0, vec_size=300, hidden=350,min_cls=5, lr=0.0005)
+args = NLP_args(k=30, min=0.0, random=0, hidden=350,min_cls=5, lr=0.0005)
 data = make_data(threshold_for_dropping=0)
 document=preprocess_data(data)
 
 
 #%% word2vec kmeans
-args.word2vec_vec_size_for_kmeans= 300
 
 word2vec_for_kmeans_model = Word2Vec(min_count=args.min,
                                     window=5,
@@ -76,7 +75,6 @@ word2vec_for_kmeans_model = Word2Vec(min_count=args.min,
                                     alpha=0.03,
                                     min_alpha=0.0007)
 
-filename = "word2vec_model.pkl"
 pickle.dump(word2vec_for_kmeans_model, open("word2vec_model.pkl", "wb"))
 
 train_tokens = document.train.get_sentences_tokens()
@@ -86,7 +84,7 @@ word2vec_centroids=word2vec_kmeans(document,args,word2vec_for_kmeans_model, args
 
 
 # %% RNN classification
-eval_best_rnn_model(args,document)
+#eval_best_rnn_model(args,document)
 
 '''
 document.train.make_word2vec_for_rnn(word2vec_for_rnn_model)
