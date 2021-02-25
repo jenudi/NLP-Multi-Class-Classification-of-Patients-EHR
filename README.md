@@ -8,4 +8,4 @@ A database in MongoDB stores the texts and final K-means clusters for each model
 1. Most common labels and closest sentences in the cluster assigned to the text according to the Word2vec & K-means model or the TF-IDF & K-means model.
 2. Predicted diagnosis for the condition described in the text according to the Word2vec & RNN model, TF-IDF & Random forest model.
 
-Technologies used in the project: Python, PyTorch, Flask, MongoDB.
+Technologies used in the project: Python, PyTorch, Gensim, Scikit-learn, Flask, MongoDB.
