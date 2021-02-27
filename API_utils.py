@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 from classes import *
-from DB import sentences_collection, tfidf_clusters_collection, word2vec_clusters_collection
+from pymongo import MongoClient
 from sklearn.feature_extraction.text import TfidfVectorizer
 from gensim.models.word2vec import Word2Vec
 from sklearn.cluster import KMeans
@@ -10,13 +10,28 @@ import torch
 import pickle
 
 
+args = NLP_args(k=30, min=0.0, random=0, hidden=350,min_cls=5, lr=0.0005)
+
+word2vec_for_kmeans_model=pickle.load(open("word2vec_for_kmeans_model.pkl", "rb"))
+tfidf_model=pickle.load(open("tfidf_model.pkl", "rb"))
+random_forest_model=pickle.load(open("random_forest_model.pkl", "rb"))
+
+
+client = MongoClient('mongodb://localhost:27017/')
+with client:
+
+    NLP_project_db = client["NLP_models_comparison_project"]
+    sentences_collection = NLP_project_db["sentences"]
+    tfidf_clusters_collection = NLP_project_db["tfidf_clusters"]
+    word2vec_clusters_collection = NLP_project_db["word2vec_clusters"]
+
+
 try:
     _ = stopwords.words("english")
 except LookupError:
     import nltk
     nltk.download('stopwords')
 stopword_set = set(stopwords.words("english"))
-
 
 
 def get_euclidiaan_distance(first_embeddings, second_embeddings):

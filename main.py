@@ -75,15 +75,21 @@ word2vec_for_kmeans_model = Word2Vec(min_count=args.min,
                                     alpha=0.03,
                                     min_alpha=0.0007)
 
-pickle.dump(word2vec_for_kmeans_model, open("word2vec_model.pkl", "wb"))
 
 train_tokens = document.train.get_sentences_tokens()
 word2vec_for_kmeans_model.build_vocab(train_tokens)
 word2vec_for_kmeans_model.train(train_tokens, total_examples=word2vec_for_kmeans_model.corpus_count, epochs=30)
+
 word2vec_centroids=word2vec_kmeans(document,args,word2vec_for_kmeans_model, args.word2vec_vec_size_for_kmeans)
 
+pickle.dump(word2vec_for_kmeans_model, open("word2vec_for_kmeans_model.pkl", "wb"))
 
 # %% RNN classification
+
+# need to save word2vec_model_for_rnn
+# need to save rnn_model
+# need to save the train set's labels_dict
+
 eval_best_rnn_model(args,document)
 
 '''

@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 import json
 import requests
 
-url="http://localhost:8080/"
+url="http://localhost:5000/"
 api="word2vec_cluster"
 url+=api
 

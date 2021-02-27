@@ -47,14 +47,14 @@ def word2vec_kmeans(document,args,word2vec_model, vector_size,print_sentences=Fa
     document.validation.make_word2vec_for_kmeans(word2vec_model, vector_size)
     document.test.make_word2vec_for_kmeans(word2vec_model, vector_size)
 
-    word2vec_for_kmeans_model = KMeans(n_clusters=args.k,
+    kmeans_model = KMeans(n_clusters=args.k,
                                    random_state=args.random).fit(document.train.word2vec_for_kmeans)
 
-    word2vec_centroids = word2vec_for_kmeans_model.cluster_centers_
+    word2vec_centroids = kmeans_model.cluster_centers_
 
-    document.train.word2vec_clusters = word2vec_for_kmeans_model.labels_
-    document.validation.word2vec_clusters = word2vec_for_kmeans_model.predict(document.validation.word2vec_for_kmeans)
-    document.test.word2vec_clusters = word2vec_for_kmeans_model.predict(document.test.word2vec_for_kmeans)
+    document.train.word2vec_clusters = kmeans_model.labels_
+    document.validation.word2vec_clusters = kmeans_model.predict(document.validation.word2vec_for_kmeans)
+    document.test.word2vec_clusters = kmeans_model.predict(document.test.word2vec_for_kmeans)
 
     if print_sentences:
         print(f'Clusters number = {args.k}')
