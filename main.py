@@ -67,7 +67,6 @@ document=preprocess_data(data)
 
 
 #%% word2vec kmeans
-
 word2vec_for_kmeans_model = Word2Vec(min_count=args.min,
                                     window=5,
                                     size=args.word2vec_vec_size_for_kmeans,
@@ -77,15 +76,15 @@ word2vec_for_kmeans_model = Word2Vec(min_count=args.min,
 
 
 train_tokens = document.train.get_sentences_tokens()
-word2vec_for_kmeans_model.build_vocab(train_tokens)
-word2vec_for_kmeans_model.train(train_tokens, total_examples=word2vec_for_kmeans_model.corpus_count, epochs=30)
+_=word2vec_for_kmeans_model.build_vocab(train_tokens)
+_=word2vec_for_kmeans_model.train(train_tokens, total_examples=word2vec_for_kmeans_model.corpus_count, epochs=30)
 
 word2vec_centroids=word2vec_kmeans(document,args,word2vec_for_kmeans_model, args.word2vec_vec_size_for_kmeans)
 
 pickle.dump(word2vec_for_kmeans_model, open("word2vec_for_kmeans_model.pkl", "wb"))
 
-# %% RNN classification
 
+# %% RNN classification
 # need to save word2vec_model_for_rnn
 # need to save rnn_model
 # need to save the train set's labels_dict
@@ -93,11 +92,24 @@ pickle.dump(word2vec_for_kmeans_model, open("word2vec_for_kmeans_model.pkl", "wb
 eval_best_rnn_model(args,document)
 
 '''
-document.train.make_word2vec_for_rnn(word2vec_for_rnn_model)
-document.validation.make_word2vec_for_rnn(word2vec_for_rnn_model)
-document.test.make_word2vec_for_rnn(word2vec_for_rnn_model)
+word2vec_for_rnn_model = Word2Vec(min_count=args.min,
+                                    window=5,
+                                    size=args.word2vec_vec_size_for_rnn,
+                                    sample=1e-3,
+                                    alpha=0.03,
+                                    min_alpha=0.0007)
 
-rnn_model = RNN(args.vec_size, args.hidden, len(document.train.labels_dict))
+train_tokens = document.train.get_sentences_tokens()                                    
+_=word2vec_for_rnn_model.build_vocab(train_tokens)
+_=word2vec_for_rnn_model.train(train_tokens, total_examples=word2vec_for_rnn_model.corpus_count, epochs=30)
+pickle.dump(word2vec_for_rnn_model, open("word2vec_for_rnn_model.pkl", "wb"))
+
+document.train.make_word2vec_for_rnn(args, 5)
+pickle.dump(document.train.labels_dict, open("labels_dict.pkl", "wb"))
+'''
+
+'''
+rnn_model = RNN(args.word2vec_vec_size_for_rnn, args.hidden, len(document.train.labels_dict))
 criterion = nn.NLLLoss(weight=document.train.weights)
 optimizer = torch.optim.SGD(rnn_model.parameters(), lr=args.lr)
 

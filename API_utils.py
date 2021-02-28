@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 from classes import *
+from RNN import *
 from pymongo import MongoClient
 from sklearn.feature_extraction.text import TfidfVectorizer
 from gensim.models.word2vec import Word2Vec
@@ -12,8 +13,18 @@ import pickle
 
 args = NLP_args(k=30, min=0.0, random=0, hidden=350,min_cls=5, lr=0.0005)
 
+labels_dict=pickle.load(open("labels_dict.pkl", "rb"))
+
 word2vec_for_kmeans_model=pickle.load(open("word2vec_for_kmeans_model.pkl", "rb"))
+
 tfidf_model=pickle.load(open("tfidf_model.pkl", "rb"))
+
+word2vec_for_rnn_model=pickle.load(open("word2vec_for_rnn_model.pkl", "rb"))
+
+rnn_model = RNN(args.word2vec_vec_size_for_rnn, args.hidden, len(labels_dict))
+rnn_model.load_state_dict(torch.load('rnn_model.pth'))
+rnn_model.eval()
+
 random_forest_model=pickle.load(open("random_forest_model.pkl", "rb"))
 
 

@@ -163,8 +163,7 @@ class Document_set:
         self.weights = torch.FloatTensor(1 - (cls_w / sum(cls_w)))
         train_tokens = self.get_sentences_tokens()
         if window is not None:
-            args.word2vec_vec_size_for_rnn=window
-            word2vec_model = Word2Vec(min_count=args.min, window=window, size=args.vec_size,
+            word2vec_model = Word2Vec(min_count=args.min, window=window, size=args.word2vec_vec_size_for_rnn,
                                       sample=1e-3, alpha=0.03, min_alpha=0.0007)
             word2vec_model.build_vocab(train_tokens)
             word2vec_model.train(train_tokens, total_examples=word2vec_model.corpus_count, epochs=30)

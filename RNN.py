@@ -86,7 +86,7 @@ def init_rnn(args,document,model_name,n_iters=100000):
     all_losses = list()
     plot_steps = 1000
     model=document.train.word2vec_for_rnn
-    rnn_model = RNN(args.vec_size, args.hidden, len(document.train.labels_dict))
+    rnn_model = RNN(args.word2vec_vec_size_for_rnn, args.hidden, len(document.train.labels_dict))
     print(f"model started: {model_name}")
     for iter in range(n_iters):
         label, input_tensor, cls_numbers = document.train.make_random_sample_for_rnn(model,model_name)
@@ -168,7 +168,7 @@ def eval_best_rnn_model(args,document):
                 args.lr = learning_rate
                 if model == 'w2v_p':
                     document.train.make_word2vec_for_rnn(args,None)
-                    args.vec_size = 200
+                    args.word2vec_vec_size_for_rnn = 200
                 else:
                     if model == 'w2v_3':
                         document.train.make_word2vec_for_rnn(args,3)

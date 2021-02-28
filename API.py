@@ -96,11 +96,10 @@ def word2vec_rnn_classification():
     sentence_object = Sentence_in_document(sentence.strip().lower())
     sentence_object.preprocess_sentence_for_API(stopword_set)
 
-    '''
     try:
-        input_tensor = torch.zeros(len(sentence_object.tokens), 1, args.word2vec_vec_size_for_kmeans)
+        input_tensor = torch.zeros(len(sentence_object.tokens), 1, args.word2vec_vec_size_for_rnn)
         for index, token in enumerate(sentence_object.tokens):
-            numpy_copy = word2vec_for_rnn.wv[token].copy()
+            numpy_copy = word2vec_for_rnn_model.wv[token].copy()
             input_tensor[index][0][:] = torch.from_numpy(numpy_copy)
         with torch.no_grad():
             rnn_model.eval()
@@ -108,14 +107,12 @@ def word2vec_rnn_classification():
             for i in range(input_tensor.size()[0]):
                 output, hidden = rnn_model(input_tensor[i], hidden)
             predicted_label_number = int(torch.max(output, 1)[1].detach())
-            
-        predicted_label=labels_dict[predicted_label_number]
-        return jsonify({"predicted label":predicted_label}), 200
+    
+        predicted_label = labels_dict[predicted_label_number]
+        return jsonify({"predicted label": predicted_label}), 200
     
     except:
         return jsonify({"error":"model failed"}), 500
-
-    '''
 
 
 @app.route("/random_forest_classification",methods=["POST"])
@@ -137,7 +134,6 @@ def tfidf_random_forest_classification():
 
     except:
         return jsonify({"error":"model failed"}), 500
-
 
 
 if __name__ == "__main__":
