@@ -179,4 +179,4 @@ def tfidf_random_forest_classification_function(sentence,queue):
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run()
