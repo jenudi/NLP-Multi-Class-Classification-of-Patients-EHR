@@ -8,6 +8,6 @@ A database in MongoDB stores the texts and details about the final K-means clust
  
 Models deployed as a REST API with multiprocessing using Flask. The API receives from a request an unknown medical text and returns one of the following:
 1. Most common labels and closest sentences in the cluster assigned to the text according to the Word2vec & K-means model or the TF-IDF & K-means model.
-2. Predicted diagnosis for the condition described in the text according to the Word2vec & RNN model, TF-IDF & Random forest model.
+2. Predicted diagnosis for the condition described in the text according to the Word2vec & RNN model or the TF-IDF & Random forest model.
 
 Technologies used in the project: Python, PyTorch, Gensim, Scikit-learn, Flask, MongoDB.
