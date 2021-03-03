@@ -4,14 +4,51 @@ from API_utils import *
 app = Flask(__name__)
 
 
+def handle_request(sentence,function_name):
+    check_number_of_free_processes()
+    decrease_number_of_free_processes()
+    queue=Queue()
+    new_process=Process(target=function_name,args=(sentence,queue))
+    new_process.start()
+    new_process.join()
+    increase_number_of_free_processes()
+    response=queue.get()
+    queue.close()
+    return response
+
+
 @app.route("/word2vec_cluster",methods=["POST"])
 def word2vec_cluster():
-
     sentence=eval(request.get_json())["sentence"]
-    if sentence is None or len(sentence)==0:
-        return jsonify({"error":"no sentence"}), 400
-    elif not isinstance(sentence,str):
-        return jsonify({"error":"value entered is not a string"}), 400
+    response=handle_request(sentence,word2vec_cluster_function)
+    return jsonify(response[0]),response[1]
+
+
+@app.route("/tfidf_cluster",methods=["POST"])
+def tfidf_cluster():
+    sentence=eval(request.get_json())["sentence"]
+    response=handle_request(sentence,tfidf_cluster_function)
+    return jsonify(response[0]),response[1]
+
+
+@app.route("/word2vec_rnn_classification",methods=["POST"])
+def word2vec_rnn_classification():
+    sentence=eval(request.get_json())["sentence"]
+    response=handle_request(sentence,word2vec_rnn_classification_function)
+    return jsonify(response[0]),response[1]
+
+
+@app.route("/tfidf_random_forest_classification",methods=["POST"])
+def tfidf_random_forest_classification():
+    sentence=eval(request.get_json())["sentence"]
+    response=handle_request(sentence,tfidf_random_forest_classification_function)
+    return jsonify(response[0]),response[1]
+
+
+def word2vec_cluster_function(sentence,queue):
+    if not is_valid_sentence(sentence):
+        queue.put([{"error":"sentence invalid format"}, 400])
+        return
 
     sentence_object = Sentence_in_document(sentence.strip().lower())
     sentence_object.preprocess_sentence_for_API(stopword_set)
@@ -24,13 +61,13 @@ def word2vec_cluster():
 
         centroids_query = word2vec_clusters_collection.find({}, {"centroid": 1, "_id": 0})
         closest_centroid=find_closest_centroid(centroids_query,normalized_embeddings)
-        cluster_query=word2vec_clusters_collection.find({"centroid":closest_centroid}, {"sentences in cluster": 1, "most common labels": 1, "_id": 0})
+        cluster_query = word2vec_clusters_collection.find({"centroid":closest_centroid}, {"sentences in cluster": 1, "most common labels": 1, "_id": 0})
 
         cluster_sentences_ids = cluster_query[0]["sentences in cluster"]
         closest_sentences_distances = [inf, inf, inf, inf, inf]
         closest_sentences_texts=["", "", "", "", ""]
         for sentence_id in cluster_sentences_ids:
-            sentence_query=sentences_collection.find({"_id":sentence_id},{"word2vec embeddings":1, "text":1, "_id":0})
+            sentence_query = sentences_collection.find({"_id":sentence_id},{"word2vec embeddings":1, "text":1, "_id":0})
             sentence_embeddings=sentence_query[0]["word2vec embeddings"]
             euclidiaan_distance=get_euclidiaan_distance(normalized_embeddings, sentence_embeddings)
             if euclidiaan_distance < max(closest_sentences_distances):
@@ -39,27 +76,24 @@ def word2vec_cluster():
                 closest_sentences_texts[change_index]=sentence_query[0]["text"]
 
         cluster_labels=cluster_query[0]["most common labels"]
-        return jsonify({"most common labels in cluster":cluster_labels, "closest sentences in cluster":closest_sentences_texts}), 200
+        queue.put([{"most common labels in cluster":cluster_labels, "closest sentences in cluster":closest_sentences_texts}, 200])
+        return
 
     except:
-        return jsonify({"error":"model failed"}), 500
+        queue.put([{"error":"model failed"}, 500])
+        return
 
 
-@app.route("/tfidf_cluster",methods=["POST"])
-def tfidf_cluster():
-
-    sentence=eval(request.get_json())["sentence"]
-    if sentence is None or len(sentence)==0:
-        return jsonify({"error":"no sentence"}), 400
-    elif not isinstance(sentence,str):
-        return jsonify({"error":"value entered is not a string"}), 400
+def tfidf_cluster_function(sentence,queue):
+    if not is_valid_sentence(sentence):
+        queue.put([{"error":"sentence invalid format"}, 400])
+        return
 
     sentence_object = Sentence_in_document(sentence.strip().lower())
     sentence_object.preprocess_sentence_for_API(stopword_set)
 
     try:
         tfidf_embeddings=tfidf_model.transform([sentence_object.text]).todense()
-
         centroids_query = tfidf_clusters_collection.find({}, {"centroid": 1, "_id": 0})
         closest_centroid=find_closest_centroid(centroids_query,tfidf_embeddings)
         cluster_query=tfidf_clusters_collection.find({"centroid":closest_centroid}, {"sentences in cluster": 1, "most common labels": 1, "_id": 0})
@@ -77,21 +111,18 @@ def tfidf_cluster():
                 closest_sentences_texts[change_index] = sentence_query[0]["text"]
 
         cluster_labels = cluster_query[0]["most common labels"]
-        return jsonify({"most common labels in cluster": cluster_labels, "closest sentences in cluster": closest_sentences_texts}), 200
+        queue.put([{"most common labels in cluster": cluster_labels, "closest sentences in cluster": closest_sentences_texts}, 200])
+        return
 
     except:
-        return jsonify({"error":"model failed"}), 500
+        queue.put([{"error":"model failed"}, 500])
+        return
 
 
-
-@app.route("/rnn_classification",methods=["POST"])
-def word2vec_rnn_classification():
-
-    sentence=eval(request.get_json())["sentence"]
-    if sentence is None or len(sentence)==0:
-        return jsonify({"error":"no sentence"}), 400
-    elif not isinstance(sentence,str):
-        return jsonify({"error":"value entered is not a string"}), 400
+def word2vec_rnn_classification_function(sentence,queue):
+    if not is_valid_sentence(sentence):
+        queue.put([{"error":"sentence invalid format"}, 400])
+        return
 
     sentence_object = Sentence_in_document(sentence.strip().lower())
     sentence_object.preprocess_sentence_for_API(stopword_set)
@@ -109,20 +140,18 @@ def word2vec_rnn_classification():
             predicted_label_number = int(torch.max(output, 1)[1].detach())
     
         predicted_label = labels_dict[predicted_label_number]
-        return jsonify({"predicted label": predicted_label}), 200
+        queue.put([{"predicted label": predicted_label}, 200])
+        return
     
     except:
-        return jsonify({"error":"model failed"}), 500
+        queue.put([{"error":"model failed"}, 500])
+        return
 
 
-@app.route("/random_forest_classification",methods=["POST"])
-def tfidf_random_forest_classification():
-
-    sentence=eval(request.get_json())["sentence"]
-    if sentence is None or len(sentence)==0:
-        return jsonify({"error":"no sentence"}), 400
-    elif not isinstance(sentence,str):
-        return jsonify({"error":"value entered is not a string"}), 400
+def tfidf_random_forest_classification_function(sentence,queue):
+    if not is_valid_sentence(sentence):
+        queue.put([{"error":"sentence invalid format"}, 400])
+        return
 
     sentence_object = Sentence_in_document(sentence.strip().lower())
     sentence_object.preprocess_sentence_for_API(stopword_set)
@@ -130,10 +159,12 @@ def tfidf_random_forest_classification():
     try:
         tfidf_embeddings=tfidf_model.transform([sentence_object.text]).todense()
         predicted_label=random_forest_model.predict(tfidf_embeddings)
-        return jsonify({"predicted label":predicted_label[0]}), 200
+        queue.put([{"predicted label":predicted_label[0]}, 200])
+        return
 
     except:
-        return jsonify({"error":"model failed"}), 500
+        queue.put([{"error":"model failed"}, 500])
+        return
 
 
 if __name__ == "__main__":

@@ -2,6 +2,8 @@ from flask import Flask, request, jsonify
 from classes import *
 from RNN import *
 from pymongo import MongoClient
+from multiprocessing import Process, Pool, Value, Queue, Lock, cpu_count
+from time import sleep
 from sklearn.feature_extraction.text import TfidfVectorizer
 from gensim.models.word2vec import Word2Vec
 from sklearn.cluster import KMeans
@@ -26,6 +28,9 @@ rnn_model.load_state_dict(torch.load('rnn_model.pth'))
 rnn_model.eval()
 
 random_forest_model=pickle.load(open("random_forest_model.pkl", "rb"))
+
+global number_of_free_processes
+number_of_free_processes = Value('i', cpu_count(), lock=True)
 
 
 client = MongoClient('mongodb://localhost:27017/')
@@ -57,3 +62,32 @@ def find_closest_centroid(centroids_query,embeddings):
         distances_list.append((centroid,euclidiaan_distance))
     min_centroid_index=np.argmin([distance[1] for distance in distances_list])
     return distances_list[min_centroid_index][0]
+
+
+class synchronizationError(Exception):
+    pass
+
+
+def check_number_of_free_processes():
+    while True:
+        if number_of_free_processes.value>=1:
+            return
+        else:
+            sleep(1)
+
+
+def increase_number_of_free_processes():
+    number_of_free_processes.value += 1
+
+
+def decrease_number_of_free_processes():
+    number_of_free_processes.value -= 1
+    if number_of_free_processes.value<0:
+        raise synchronizationError("number_of_free_processes cannot be less than 0")
+
+
+def is_valid_sentence(sentence):
+    if (sentence is None or len(sentence) == 0) or (not isinstance(sentence, str)):
+        return False
+    else:
+        return True
