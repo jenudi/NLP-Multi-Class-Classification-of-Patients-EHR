@@ -36,7 +36,7 @@ number_of_free_processes = Value('i', cpu_count(), lock=True)
 client = MongoClient('mongodb://localhost:27017/')
 with client:
 
-    NLP_project_db = client["NLP_models_comparison_project"]
+    NLP_project_db = client["NLP_models_comparison"]
     sentences_collection = NLP_project_db["sentences"]
     tfidf_clusters_collection = NLP_project_db["tfidf_clusters"]
     word2vec_clusters_collection = NLP_project_db["word2vec_clusters"]
