@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 from classes import *
 from RNN import *
 from pymongo import MongoClient
-from multiprocessing import Process, Pool, Value, Queue, Lock, cpu_count
+from multiprocessing import Process, Value, Queue, cpu_count
 from time import sleep
 from sklearn.feature_extraction.text import TfidfVectorizer
 from gensim.models.word2vec import Word2Vec

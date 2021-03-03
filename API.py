@@ -1,13 +1,15 @@
 from API_utils import *
 
 
+
 app = Flask(__name__)
+
 
 
 def handle_request(sentence,function_name):
     check_number_of_free_processes()
-    decrease_number_of_free_processes()
     queue=Queue()
+    decrease_number_of_free_processes()
     new_process=Process(target=function_name,args=(sentence,queue))
     new_process.start()
     new_process.join()
@@ -17,11 +19,13 @@ def handle_request(sentence,function_name):
     return response
 
 
+
 @app.route("/word2vec_cluster",methods=["POST"])
 def word2vec_cluster():
     sentence=eval(request.get_json())["sentence"]
     response=handle_request(sentence,word2vec_cluster_function)
     return jsonify(response[0]),response[1]
+
 
 
 @app.route("/tfidf_cluster",methods=["POST"])
@@ -31,6 +35,7 @@ def tfidf_cluster():
     return jsonify(response[0]),response[1]
 
 
+
 @app.route("/word2vec_rnn_classification",methods=["POST"])
 def word2vec_rnn_classification():
     sentence=eval(request.get_json())["sentence"]
@@ -38,11 +43,13 @@ def word2vec_rnn_classification():
     return jsonify(response[0]),response[1]
 
 
+
 @app.route("/tfidf_random_forest_classification",methods=["POST"])
 def tfidf_random_forest_classification():
     sentence=eval(request.get_json())["sentence"]
     response=handle_request(sentence,tfidf_random_forest_classification_function)
     return jsonify(response[0]),response[1]
+
 
 
 def word2vec_cluster_function(sentence,queue):
@@ -84,6 +91,7 @@ def word2vec_cluster_function(sentence,queue):
         return
 
 
+
 def tfidf_cluster_function(sentence,queue):
     if not is_valid_sentence(sentence):
         queue.put([{"error":"sentence invalid format"}, 400])
@@ -119,6 +127,7 @@ def tfidf_cluster_function(sentence,queue):
         return
 
 
+
 def word2vec_rnn_classification_function(sentence,queue):
     if not is_valid_sentence(sentence):
         queue.put([{"error":"sentence invalid format"}, 400])
@@ -148,6 +157,7 @@ def word2vec_rnn_classification_function(sentence,queue):
         return
 
 
+
 def tfidf_random_forest_classification_function(sentence,queue):
     if not is_valid_sentence(sentence):
         queue.put([{"error":"sentence invalid format"}, 400])
@@ -165,6 +175,7 @@ def tfidf_random_forest_classification_function(sentence,queue):
     except:
         queue.put([{"error":"model failed"}, 500])
         return
+
 
 
 if __name__ == "__main__":
