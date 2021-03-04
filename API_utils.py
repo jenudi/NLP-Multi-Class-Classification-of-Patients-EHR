@@ -50,15 +50,15 @@ except LookupError:
 stopword_set = set(stopwords.words("english"))
 
 
-def get_euclidiaan_distance(first_embeddings, second_embeddings):
-    return np.square(np.sum(np.square(first_embeddings - second_embeddings)))
+def get_euclidiaan_distance(first_embedding, second_embedding):
+    return np.square(np.sum(np.square(first_embedding - second_embedding)))
 
 
-def find_closest_centroid(centroids_query,embeddings):
+def find_closest_centroid(centroids_query,embedding):
     distances_list=list()
     for centroid_dict in centroids_query:
         centroid=centroid_dict["centroid"]
-        euclidiaan_distance=get_euclidiaan_distance(centroid, embeddings)
+        euclidiaan_distance=get_euclidiaan_distance(centroid, embedding)
         distances_list.append((centroid,euclidiaan_distance))
     min_centroid_index=np.argmin([distance[1] for distance in distances_list])
     return distances_list[min_centroid_index][0]

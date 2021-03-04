@@ -61,22 +61,22 @@ def word2vec_cluster_function(sentence,queue):
     sentence_object.preprocess_sentence_for_API(stopword_set)
 
     try:
-        word2vec_embeddings = np.mean([word2vec_for_kmeans_model.wv[token] if token in word2vec_for_kmeans_model.wv.vocab.keys()
+        word2vec_embedding = np.mean([word2vec_for_kmeans_model.wv[token] if token in word2vec_for_kmeans_model.wv.vocab.keys()
                                     else np.zeros(args.word2vec_vec_size_for_kmeans) for token in sentence_object.tokens], axis=0)
 
-        normalized_embeddings= word2vec_embeddings / np.linalg.norm(word2vec_embeddings)
+        normalized_embedding= word2vec_embedding / np.linalg.norm(word2vec_embedding)
 
         centroids_query = word2vec_clusters_collection.find({}, {"centroid": 1, "_id": 0})
-        closest_centroid=find_closest_centroid(centroids_query,normalized_embeddings)
+        closest_centroid=find_closest_centroid(centroids_query,normalized_embedding)
         cluster_query = word2vec_clusters_collection.find({"centroid":closest_centroid}, {"sentences in cluster": 1, "most common labels": 1, "_id": 0})
 
         cluster_sentences_ids = cluster_query[0]["sentences in cluster"]
         closest_sentences_distances = [inf, inf, inf, inf, inf]
         closest_sentences_texts=["", "", "", "", ""]
         for sentence_id in cluster_sentences_ids:
-            sentence_query = sentences_collection.find({"_id":sentence_id},{"word2vec embeddings":1, "text":1, "_id":0})
-            sentence_embeddings=sentence_query[0]["word2vec embeddings"]
-            euclidiaan_distance=get_euclidiaan_distance(normalized_embeddings, sentence_embeddings)
+            sentence_query = sentences_collection.find({"_id":sentence_id},{"word2vec embedding":1, "text":1, "_id":0})
+            sentence_embedding=sentence_query[0]["word2vec embedding"]
+            euclidiaan_distance=get_euclidiaan_distance(normalized_embedding, sentence_embedding)
             if euclidiaan_distance < max(closest_sentences_distances):
                 change_index=closest_sentences_distances.index(max(closest_sentences_distances))
                 closest_sentences_distances[change_index]=euclidiaan_distance
@@ -101,9 +101,9 @@ def tfidf_cluster_function(sentence,queue):
     sentence_object.preprocess_sentence_for_API(stopword_set)
 
     try:
-        tfidf_embeddings=tfidf_model.transform([sentence_object.text]).todense()
+        tfidf_embedding=tfidf_model.transform([sentence_object.text]).todense()
         centroids_query = tfidf_clusters_collection.find({}, {"centroid": 1, "_id": 0})
-        closest_centroid=find_closest_centroid(centroids_query,tfidf_embeddings)
+        closest_centroid=find_closest_centroid(centroids_query,tfidf_embedding)
         cluster_query=tfidf_clusters_collection.find({"centroid":closest_centroid}, {"sentences in cluster": 1, "most common labels": 1, "_id": 0})
 
         cluster_sentences_ids = cluster_query[0]["sentences in cluster"]
@@ -111,8 +111,8 @@ def tfidf_cluster_function(sentence,queue):
         closest_sentences_texts = ["", "", "", "", ""]
         for sentence_id in cluster_sentences_ids:
             sentence_query = sentences_collection.find({"_id": sentence_id})
-            sentence_embeddings = sentence_query[0]["tf-idf embeddings"]
-            euclidiaan_distance = get_euclidiaan_distance(tfidf_embeddings, sentence_embeddings)
+            sentence_embedding = sentence_query[0]["tf-idf embedding"]
+            euclidiaan_distance = get_euclidiaan_distance(tfidf_embedding, sentence_embedding)
             if euclidiaan_distance < max(closest_sentences_distances):
                 change_index = closest_sentences_distances.index(max(closest_sentences_distances))
                 closest_sentences_distances[change_index] = euclidiaan_distance
@@ -167,8 +167,8 @@ def tfidf_random_forest_classification_function(sentence,queue):
     sentence_object.preprocess_sentence_for_API(stopword_set)
 
     try:
-        tfidf_embeddings=tfidf_model.transform([sentence_object.text]).todense()
-        predicted_label=random_forest_model.predict(tfidf_embeddings)
+        tfidf_embedding=tfidf_model.transform([sentence_object.text]).todense()
+        predicted_label=random_forest_model.predict(tfidf_embedding)
         queue.put([{"predicted label":predicted_label[0]}, 200])
         return
 

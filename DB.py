@@ -44,8 +44,8 @@ if __name__ == "__main__":
                 "_id": sentence_id,
                 "text": sentence.original_text,
                 "label": sentence.label,
-                "tf-idf embeddings": list(map(float,set.tfidf[index].tolist()[:][0])),
-                "word2vec embeddings": list(map(float,set.word2vec_for_kmeans[index].tolist())),
+                "tf-idf embedding": list(map(float,set.tfidf[index].tolist()[:][0])),
+                "word2vec embedding": list(map(float,set.word2vec_for_kmeans[index].tolist())),
                 })
 
             sentences_list.append(new_sentence_document)
