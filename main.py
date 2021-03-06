@@ -1,7 +1,7 @@
 # %% Imports
 
-from classes import *
 from RNN import *
+from classes import *
 from kmeans import *
 from sklearn.feature_extraction.text import TfidfVectorizer
 from gensim.models.word2vec import Word2Vec
@@ -16,6 +16,7 @@ import pickle
 
 
 sns.set(rc={'figure.figsize': (11.7, 8.27)}, style="darkgrid")
+
 
 def make_data(threshold_for_dropping=0):
     encounter_data = pd.read_csv("encounter.csv").rename(str.lower, axis='columns')
@@ -45,24 +46,25 @@ def preprocess_data(data):
         import nltk
         nltk.download('stopwords')
     stopword_set = set(stopwords.words("english"))
-    document = Document('\n '.join(temp_sentences))
-    document.do_replaces()
-    document.make_sentences('\n ')
-    for index,sentence in enumerate(document.sentences):
+    document_ = Document('\n '.join(temp_sentences))
+    document_.do_replaces()
+    document_.make_sentences('\n ')
+    for index,sentence in enumerate(document_.sentences):
         sentence.label=data['cc'][index]
         sentence.stem_and_check_stop(stopword_set)
         sentence.make_tokens()
         sentence.make_original_text_tokens()
         sentence.text = ' '.join(sentence.tokens)
-    document.train_test_split()
-    document.train.make_lexicon()
+    document_.train_test_split()
+    document_.train.make_lexicon()
+    document_.make_dict()
     print('Classes are ready to use\n')
-    return document
+    return document_
 
 
 #%% initializing NLP arguments and data
-args = NLP_args(k=30, min=0.0, random=0, hidden=350,min_cls=5, lr=0.0005)
-data = make_data(threshold_for_dropping=0)
+args = NLP_args(k=30, min=0.0, random=0,min_cls=5,lr=0.0005)
+data = make_data(threshold_for_dropping=args.min_cls)
 document=preprocess_data(data)
 
 
@@ -89,8 +91,35 @@ pickle.dump(word2vec_for_kmeans_model, open("word2vec_for_kmeans_model.pkl", "wb
 # need to save rnn_model
 # need to save the train set's labels_dict
 
-eval_best_rnn_model(args,document)
+eval_rnn = pd.DataFrame()
+eval_rnn['y_true'] = [list(document.labels_dict.keys())[list(document.labels_dict.values()).index(sentence.label)]
+                          if sentence.label in document.labels_dict.values()
+                          else len(document.labels_dict.keys()) for sentence in document.validation.sentences]
 
+for model in args.models:
+    if model == 'w2v_3':
+        document.train.make_word2vec_for_rnn(args, 3)
+    elif model == 'w2v_5':
+        document.train.make_word2vec_for_rnn(args, 5)
+    elif model == 'w2v_p':
+        args.word2vec_vec_size_for_rnn = 200
+        document.train.make_word2vec_for_rnn(args, None)
+    rnn = RNN(args.word2vec_vec_size_for_rnn, args.hidden_layer, len(document.labels_dict))
+    optimizer = torch.optim.SGD(rnn.parameters(), lr=args.lr)
+    eval_rnn[f'y_pred_{model}_{args.lr}_{args.hidden_layer}'] = train_rnn_model(args,rnn,optimizer,document,150000)
+
+
+def compare_models(eval_df,y_pred):
+
+    for i,v in enumerate(y_pred):
+        eval_df[f"model: {i}"] = v
+    for i in eval_df.columns:
+        pass
+
+
+
+
+#%%
 '''
 word2vec_for_rnn_model = Word2Vec(min_count=args.min,
                                     window=5,
@@ -151,3 +180,5 @@ random_forest_chosen_model=RandomForestClassifier(n_estimators=n_estimators,crit
 _ = random_forest_chosen_model.fit(document.train.tfidf, train_labels)
 
 pickle.dump(random_forest_chosen_model, open("random_forest_model.pkl", "wb"))
+
+
