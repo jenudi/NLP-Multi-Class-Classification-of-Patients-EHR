@@ -159,9 +159,9 @@ class Document_set:
 
     def make_word2vec_for_kmeans(self,word2vec_model, vector_size):
         for sentence_tokens in self.get_sentences_tokens():
-            word_embeddings = np.mean([word2vec_model.wv[token] if token in word2vec_model.wv.vocab.keys()
+            word_embedding = np.mean([word2vec_model.wv[token] if token in word2vec_model.wv.vocab.keys()
                                    else np.zeros(vector_size) for token in sentence_tokens],axis=0)
-            self.word2vec_for_kmeans.append(word_embeddings /np.linalg.norm(word_embeddings))
+            self.word2vec_for_kmeans.append(word_embedding /np.linalg.norm(word_embedding))
 
     def make_word2vec_for_rnn(self,args, window=None):
         train_tokens = self.get_sentences_tokens()
