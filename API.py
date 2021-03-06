@@ -127,7 +127,6 @@ def tfidf_cluster_function(sentence,queue):
         return
 
 
-
 def word2vec_rnn_classification_function(sentence,queue):
     if not is_valid_sentence(sentence):
         queue.put([{"error":"sentence invalid format"}, 400])
@@ -142,7 +141,6 @@ def word2vec_rnn_classification_function(sentence,queue):
             numpy_copy = word2vec_for_rnn_model.wv[token].copy()
             input_tensor[index][0][:] = torch.from_numpy(numpy_copy)
         with torch.no_grad():
-            rnn_model.eval()
             hidden = rnn_model.init_hidden()
             for i in range(input_tensor.size()[0]):
                 output, hidden = rnn_model(input_tensor[i], hidden)

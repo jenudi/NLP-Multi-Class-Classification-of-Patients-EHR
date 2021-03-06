@@ -58,6 +58,7 @@ def preprocess_data(data):
     document_.train_test_split()
     document_.train.make_lexicon()
     document_.make_dict()
+    pickle.dump(document_.labels_dict,open("labels_dict.pkl", "wb"))
     print('Classes are ready to use\n')
     return document_
 
@@ -117,6 +118,7 @@ def compare_models(eval_df,y_pred):
         pass
 
 
+pickle.dump(document.train.word2vec_for_rnn,open("word2vec_for_rnn_model.pkl", "wb"))
 
 
 #%%
