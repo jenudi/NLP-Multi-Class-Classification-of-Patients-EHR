@@ -84,7 +84,9 @@ _=word2vec_for_kmeans_model.train(train_tokens, total_examples=word2vec_for_kmea
 
 word2vec_centroids=word2vec_kmeans(document,args,word2vec_for_kmeans_model, args.word2vec_vec_size_for_kmeans)
 
-pickle.dump(word2vec_for_kmeans_model, open("word2vec_for_kmeans_model.pkl", "wb"))
+#pickle.dump(word2vec_for_kmeans_model, open("word2vec_for_kmeans_model.pkl", "wb"))
+word2vec_for_kmeans_model.save("word2vec_for_kmeans_model.model")
+
 
 
 # %% RNN classification
@@ -117,8 +119,9 @@ def compare_models(eval_df,y_pred):
     for i in eval_df.columns:
         pass
 
-
-pickle.dump(document.train.word2vec_for_rnn,open("word2vec_for_rnn_model.pkl", "wb"))
+document.train.make_word2vec_for_rnn(args,5)
+#pickle.dump(document.train.word2vec_for_rnn,open("word2vec_for_rnn_model.pkl", "wb"))
+document.train.word2vec_for_rnn.save("word2vec_for_rnn_model.model")
 
 
 #%%
