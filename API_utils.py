@@ -17,14 +17,10 @@ args = NLP_args(k=30, min=0.0, random=0,min_cls=5,lr=0.0005)
 
 labels_dict=pickle.load(open("labels_dict.pkl", "rb"))
 
-#word2vec_for_kmeans_model=pickle.load(open("word2vec_for_kmeans_model.pkl", "rb"))
 word2vec_for_kmeans_model = Word2Vec.load("word2vec_for_kmeans_model.model")
-
-
 
 tfidf_model=pickle.load(open("tfidf_model.pkl", "rb"))
 
-#word2vec_for_rnn_model=pickle.load(open("word2vec_for_rnn_model.pkl", "rb"))
 word2vec_for_rnn_model = Word2Vec.load("word2vec_for_rnn_model.model")
 
 
