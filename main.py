@@ -143,17 +143,24 @@ pickle.dump(tfidf_model, open("tfidf_model.pkl", "wb"))
 train_labels = [sentence.label for sentence in document.train.sentences]
 validation_labels = [sentence.label for sentence in document.validation.sentences]
 n_estimators_list=[100,200,300,400,500,1000,3000,5000]
-validation_scores=list()
+random_forest_validation_scores=list()
 for n_estimators in n_estimators_list:
-    random_forest_model = RandomForestClassifier(n_estimators=n_estimators,criterion='gini',max_depth=None,bootstrap=True,random_state=0)
+    random_forest_model = RandomForestClassifier(n_estimators=n_estimators, criterion='gini', max_depth=None, bootstrap=True, class_weight="balanced_subsample", random_state=0)
     _ = random_forest_model.fit(document.train.tfidf,train_labels)
-    validation_score=random_forest_model.score(document.validation.tfidf,validation_labels)
-    validation_scores.append(validation_score)
+    #validation_score=random_forest_model.score(document.validation.tfidf,validation_labels)
+    y_pred=random_forest_model(document.validation.tfidf)
+    random_forest_validation_score=f1_score(validation_labels,y_pred)
+    random_forest_validation_scores.append(random_forest_validation_score)
     print("Random forest with TF-IDF enbeddings score of n_estimator=" + str(n_estimators)+ " is " + str(validation_score))
 
 best_n_estimator=n_estimators_list[np.argmax(validation_scores)]
 print("the best n_estimator is "+ str(best_n_estimator) + "with score of "+ str(np.argmax(validation_scores)))
-random_forest_chosen_model=RandomForestClassifier(n_estimators=n_estimators,criterion='gini',max_depth=None,bootstrap=True,random_state=0)
+random_forest_chosen_model=RandomForestClassifier(n_estimators=n_estimators, criterion='gini', max_depth=None, bootstrap=True, class_weight="balanced_subsample", random_state=0)
 _ = random_forest_chosen_model.fit(document.train.tfidf, train_labels)
 
 pickle.dump(random_forest_chosen_model, open("random_forest_model.pkl", "wb"))
+
+test_labels = [sentence.label for sentence in document.test.sentences]
+y_pred = random_forest_model(document.test.tfidf)
+
+random_forest_test_score=f1_score(test_labels,y_pred)
