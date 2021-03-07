@@ -64,7 +64,6 @@ def preprocess_data(data):
 
 
 #%% initializing NLP arguments and data
-
 args = NLP_args(k=30, min=0.0, random=0,min_cls=5,lr=0.001, hidden_layer=400,epoch_num=30)
 data = make_data(threshold_for_dropping=args.min_cls)
 document=preprocess_data(data)
@@ -83,14 +82,13 @@ train_tokens = document.train.get_sentences_tokens()
 _=word2vec_for_kmeans_model.build_vocab(train_tokens)
 _=word2vec_for_kmeans_model.train(train_tokens, total_examples=word2vec_for_kmeans_model.corpus_count, epochs=30)
 
-word2vec_centroids=word2vec_kmeans(document,args,word2vec_for_kmeans_model, args.word2vec_vec_size_for_kmeans,t_sne=True)
+model_name="self-trained word2vec with window 5"
+word2vec_centroids=word2vec_kmeans(document,args,word2vec_for_kmeans_model, args.word2vec_vec_size_for_kmeans,model_name,t_sne=True)
 
 word2vec_for_kmeans_model.save("word2vec_for_kmeans_model.model")
 
 
-
 # %% RNN classification
-
 eval_rnn = pd.DataFrame()
 eval_rnn['y_true'] = [list(document.labels_dict.keys())[list(document.labels_dict.values()).index(sentence.label)]
                           if sentence.label in document.labels_dict.values()
@@ -101,7 +99,6 @@ rnn = RNN(args.word2vec_vec_size_for_rnn, args.hidden_layer, len(document.labels
 #rnn = RNN(args.word2vec_vec_size_for_rnn,args.hidden_layer, 2, len(document.labels_dict))
 training = TrainValidate(args,document,rnn)
 eval_rnn[f'y_pred_{document.train.word2vec_model_name}_{args.lr}_{args.hidden_layer}'] = training.main(continue_training=False, decay_learning=False)
-
 
 
 for model in args.models:
@@ -123,7 +120,6 @@ document.train.make_word2vec_for_rnn(args, 5)
 
 document.train.make_word2vec_for_rnn(args,5)
 document.train.word2vec_for_rnn.save("word2vec_for_rnn_model.model")
-
 
 
 #%%TF-IDF kmeans

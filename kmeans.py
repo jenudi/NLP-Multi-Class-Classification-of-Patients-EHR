@@ -42,7 +42,7 @@ def print_sentences_by_clusters(document, clusters_dict, validation_predict):
         print('\n')
 
 
-def word2vec_kmeans(document,args,word2vec_model, vector_size,print_sentences=False,t_sne=False):
+def word2vec_kmeans(document,args,word2vec_model, vector_size,model_name,print_sentences=False,t_sne=False):
 
     document.train.make_word2vec_for_kmeans(word2vec_model, vector_size)
     document.validation.make_word2vec_for_kmeans(word2vec_model, vector_size)
@@ -67,14 +67,15 @@ def word2vec_kmeans(document,args,word2vec_model, vector_size,print_sentences=Fa
 
         most_common_label_in_clusters=list()
         for cluster_number in range(args.k):
-            counter=Counter(clusters_labels[cluster_number])
-            if counter.most_common(1)[0][0]=="no specific issue" and len(counter.most_common(2))>1:
-                most_common_label_in_clusters.append(counter.most_common(2)[1][0])
-            else:
-                most_common_label_in_clusters.append(counter.most_common(1)[0][0])
+            counter = Counter(clusters_labels[cluster_number])
+            if len(counter.most_common(1))>0:
+                if counter.most_common(1)[0][0]=="no specific issue" and len(counter.most_common(2))>1:
+                    most_common_label_in_clusters.append(counter.most_common(2)[1][0])
+                else:
+                    most_common_label_in_clusters.append(counter.most_common(1)[0][0])
 
 
-        make_tsne(document.train.word2vec_for_kmeans, 'Word2Vec',document.train.word2vec_clusters,most_common_label_in_clusters)
+        make_tsne(document.train.word2vec_for_kmeans, model_name,document.train.word2vec_clusters,most_common_label_in_clusters)
 
 
     if print_sentences:
@@ -111,11 +112,12 @@ def tfidf_kmeans(document,args,tfidf_trained_model, print_sentences=False, t_sne
 
         most_common_label_in_clusters=list()
         for cluster_number in range(args.k):
-            counter=Counter(clusters_labels[cluster_number])
-            if counter.most_common(1)[0][0]=="no specific issue" and len(counter.most_common(2))>1:
-                most_common_label_in_clusters.append(counter.most_common(2)[1][0])
-            else:
-                most_common_label_in_clusters.append(counter.most_common(1)[0][0])
+            counter = Counter(clusters_labels[cluster_number])
+            if len(counter.most_common(1))>0:
+                if counter.most_common(1)[0][0]=="no specific issue" and len(counter.most_common(2))>1:
+                    most_common_label_in_clusters.append(counter.most_common(2)[1][0])
+                else:
+                    most_common_label_in_clusters.append(counter.most_common(1)[0][0])
 
         make_tsne(document.train.tfidf, 'TF-IDF', document.train.tfidf_clusters,most_common_label_in_clusters)
 
