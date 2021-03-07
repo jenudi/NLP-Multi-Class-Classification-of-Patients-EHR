@@ -37,7 +37,7 @@ if __name__ == "__main__":
             tfidf_clusters_list[sentence_tfidf_cluster-1]["most common labels"].append(sentence.label)
 
             word2vec_clusters_list[sentence_word2vec_cluster-1]["sentences in cluster"].append(sentence_id)
-            word2vec_clusters_list[sentence_tfidf_cluster-1]["most common labels"].append(sentence.label)
+            word2vec_clusters_list[sentence_word2vec_cluster-1]["most common labels"].append(sentence.label)
 
 
             new_sentence_document=SON({
