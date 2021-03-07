@@ -13,7 +13,7 @@ import seaborn as sns
 from sklearn.ensemble import RandomForestClassifier
 import random
 import pickle
-
+from sklearn.metrics import f1_score
 
 sns.set(rc={'figure.figsize': (11.7, 8.27)}, style="darkgrid")
 
@@ -64,9 +64,22 @@ def preprocess_data(data):
 
 
 #%% initializing NLP arguments and data
-args = NLP_args(k=30, min=0.0, random=0,min_cls=5,lr=0.0005)
+
+args = NLP_args(k=30, min=0.0, random=0,min_cls=5,lr=0.001, hidden_layer=400,epoch_num=30)
 data = make_data(threshold_for_dropping=args.min_cls)
 document=preprocess_data(data)
+
+eval_rnn = pd.DataFrame()
+eval_rnn['y_true'] = [list(document.labels_dict.keys())[list(document.labels_dict.values()).index(sentence.label)]
+                          if sentence.label in document.labels_dict.values()
+                          else len(document.labels_dict.keys()) for sentence in document.validation.sentences]
+
+document.train.make_word2vec_for_rnn(args, 5)
+rnn = RNN(args.word2vec_vec_size_for_rnn, args.hidden_layer, len(document.labels_dict))
+#rnn = RNN(args.word2vec_vec_size_for_rnn,args.hidden_layer, 2, len(document.labels_dict))
+training = TrainValidate(args,document,rnn)
+eval_rnn[f'y_pred_{document.train.word2vec_model_name}_{args.lr}_{args.hidden_layer}'] = training.main(continue_training=False, decay_learning=False)
+
 
 
 #%% word2vec kmeans
@@ -94,10 +107,7 @@ word2vec_for_kmeans_model.save("word2vec_for_kmeans_model.model")
 # need to save rnn_model
 # need to save the train set's labels_dict
 
-eval_rnn = pd.DataFrame()
-eval_rnn['y_true'] = [list(document.labels_dict.keys())[list(document.labels_dict.values()).index(sentence.label)]
-                          if sentence.label in document.labels_dict.values()
-                          else len(document.labels_dict.keys()) for sentence in document.validation.sentences]
+
 
 for model in args.models:
     if model == 'w2v_3':
@@ -107,53 +117,20 @@ for model in args.models:
     elif model == 'w2v_p':
         args.word2vec_vec_size_for_rnn = 200
         document.train.make_word2vec_for_rnn(args, None)
-    rnn = RNN(args.word2vec_vec_size_for_rnn, args.hidden_layer, len(document.labels_dict))
-    optimizer = torch.optim.SGD(rnn.parameters(), lr=args.lr)
-    eval_rnn[f'y_pred_{model}_{args.lr}_{args.hidden_layer}'] = train_rnn_model(args,rnn,optimizer,document,150000)
 
 
-def compare_models(eval_df,y_pred):
+document.train.make_word2vec_for_rnn(args, 5)
+rnn = RNN(args.word2vec_vec_size_for_rnn, args.hidden_layer, len(document.labels_dict))
+#rnn = RNN(args.word2vec_vec_size_for_rnn,args.hidden_layer, 2, len(document.labels_dict))
+training = TrainValidate(args,document,rnn)
+eval_rnn[f'y_pred_{document.train.word2vec_model_name}_{args.lr}_{args.hidden_layer}'] = training.main(continue_training=False, decay_learning=False)
 
-    for i,v in enumerate(y_pred):
-        eval_df[f"model: {i}"] = v
-    for i in eval_df.columns:
-        pass
+
 
 document.train.make_word2vec_for_rnn(args,5)
-#pickle.dump(document.train.word2vec_for_rnn,open("word2vec_for_rnn_model.pkl", "wb"))
 document.train.word2vec_for_rnn.save("word2vec_for_rnn_model.model")
 
 
-#%%
-'''
-word2vec_for_rnn_model = Word2Vec(min_count=args.min,
-                                    window=5,
-                                    size=args.word2vec_vec_size_for_rnn,
-                                    sample=1e-3,
-                                    alpha=0.03,
-                                    min_alpha=0.0007)
-
-train_tokens = document.train.get_sentences_tokens()                                    
-_=word2vec_for_rnn_model.build_vocab(train_tokens)
-_=word2vec_for_rnn_model.train(train_tokens, total_examples=word2vec_for_rnn_model.corpus_count, epochs=30)
-pickle.dump(word2vec_for_rnn_model, open("word2vec_for_rnn_model.pkl", "wb"))
-
-document.train.make_word2vec_for_rnn(args, 5)
-pickle.dump(document.train.labels_dict, open("labels_dict.pkl", "wb"))
-'''
-
-'''
-rnn_model = RNN(args.word2vec_vec_size_for_rnn, args.hidden, len(document.train.labels_dict))
-criterion = nn.NLLLoss(weight=document.train.weights)
-optimizer = torch.optim.SGD(rnn_model.parameters(), lr=args.lr)
-
-init_rnn(rnn_model,criterion,optimizer,document,n_iters=100000)
-
-torch.save(rnn_model.state_dict(),'rnn_model.pth')
-rnn_model.load_state_dict(torch.load('rnn_model.pth'))
-rnn_model.eval()
-predict_rnn(document,rnn_model)
-'''
 
 #%%TF-IDF kmeans
 random.shuffle(document.train.sentences)
