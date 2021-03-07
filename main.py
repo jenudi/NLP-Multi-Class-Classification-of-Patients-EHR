@@ -115,10 +115,10 @@ for model in args.models:
 
 
 document.train.make_word2vec_for_rnn(args, 5)
-rnn = RNN(args.word2vec_vec_size_for_rnn, args.hidden_layer, len(document.labels_dict))
+#rnn = RNN(args.word2vec_vec_size_for_rnn, args.hidden_layer, len(document.labels_dict))
 #rnn = RNN(args.word2vec_vec_size_for_rnn,args.hidden_layer, 2, len(document.labels_dict))
-training = TrainValidate(args,document,rnn)
-eval_rnn[f'y_pred_{document.train.word2vec_model_name}_{args.lr}_{args.hidden_layer}'] = training.main(continue_training=False, decay_learning=False)
+#training = TrainValidate(args,document,rnn)
+#eval_rnn[f'y_pred_{document.train.word2vec_model_name}_{args.lr}_{args.hidden_layer}'] = training.main(continue_training=False, decay_learning=False)
 
 
 document.train.make_word2vec_for_rnn(args,5)

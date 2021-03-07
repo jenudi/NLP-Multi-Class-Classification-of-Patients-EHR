@@ -3,9 +3,10 @@ from matplotlib import pyplot as plt
 from sklearn.manifold import TSNE
 import seaborn as sns
 from classes import *
+#from DB import tfidf_clusters_list, word2vec_clusters_list
+from collections import Counter
 
-
-def make_tsne(model, model_name, labels):
+def make_tsne(model, model_name, labels,word2vec_clusters_list):
     fig = plt.figure()
     tsne = TSNE()
     palette = sns.color_palette("icefire", len(set(labels)))
@@ -15,6 +16,8 @@ def make_tsne(model, model_name, labels):
     sns.scatterplot(x=model_tsne_embedded[:, 0], y=model_tsne_embedded[:, 1], legend='full', palette=palette, hue=labels)
     plt.scatter(centers.iloc[:,0].values, centers.iloc[:,1].values, c=palette, s=200, alpha=0.5)
     fig.suptitle(f'Model: {model_name}', fontsize=16)
+    for i in range(30):
+        plt.text(centers.iloc[i,0].values,centers.iloc[i,1].values,word2vec_clusters_list[i])
     plt.show()
 
 
@@ -56,13 +59,37 @@ def word2vec_kmeans(document,args,word2vec_model, vector_size,print_sentences=Fa
     document.validation.word2vec_clusters = kmeans_model.predict(document.validation.word2vec_for_kmeans)
     document.test.word2vec_clusters = kmeans_model.predict(document.test.word2vec_for_kmeans)
 
+    #tfidf_clusters_list=list()
+    #word2vec_clusters_list=list(range(30))
+    word2vec_clusters_list = list()
+    for i in range(30):
+        word2vec_clusters_list.append([])
+    for index,sentence in enumerate(document.train.sentences):
+        #sentence_tfidf_cluster=set.tfidf_clusters[index]
+        sentence_word2vec_cluster=document.train.word2vec_clusters[index]
+        #tfidf_clusters_list[sentence_tfidf_cluster-1]["sentences in cluster"].append(sentence_id)
+        #tfidf_clusters_list[sentence_tfidf_cluster-1]["most common labels"].append(sentence.label)
+        #word2vec_clusters_list[sentence_word2vec_cluster-1]["sentences in cluster"].append(sentence_id)
+
+        word2vec_clusters_list[sentence_word2vec_cluster-1].append(sentence.label)
+
+    for cluster_list in [word2vec_clusters_list]:
+        for cluster_number in range(args.k):
+            counter=Counter(cluster_list[cluster_number])
+            if len(counter.most_common(3))>2:
+                cluster_list[cluster_number]=[count[0] for count in counter.most_common(3)]
+            elif len(counter.most_common(3))==2:
+                cluster_list[cluster_number]=[count[0] for count in counter.most_common(2)]
+            else:
+                cluster_list[cluster_number] =[counter.most_common(1)[0][0]]
+
     if print_sentences:
         print(f'Clusters number = {args.k}')
         word2vec_clusters_dict = document.train.clusters_to_sentences_indexes_dict(document.train.word2vec_clusters,
                                                                                    args.k)
         print_sentences_by_clusters(document, word2vec_clusters_dict,document.test.word2vec_clusters)
     if t_sne:
-        make_tsne(document.train.word2vec_for_kmeans, 'Word2Vec',document.train.word2vec_clusters)
+        make_tsne(document.train.word2vec_for_kmeans, 'Word2Vec',document.train.word2vec_clusters,word2vec_clusters_list)
 
     return word2vec_centroids
 

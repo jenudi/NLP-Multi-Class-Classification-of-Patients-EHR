@@ -11,9 +11,7 @@ from gensim.models.word2vec import Word2Vec
 from gensim.models.keyedvectors import KeyedVectors
 
 
-
 class NLP_args:
-
     def __init__(self, k=30, min=0.0, random=0, min_cls=5,
                  word2vec_vec_size_for_kmeans=300, lr=0.0002, hidden_layer=200, epoch_num=15):
         self.k = k
