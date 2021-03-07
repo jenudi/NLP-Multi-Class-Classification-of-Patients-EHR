@@ -69,18 +69,6 @@ args = NLP_args(k=30, min=0.0, random=0,min_cls=5,lr=0.001, hidden_layer=400,epo
 data = make_data(threshold_for_dropping=args.min_cls)
 document=preprocess_data(data)
 
-eval_rnn = pd.DataFrame()
-eval_rnn['y_true'] = [list(document.labels_dict.keys())[list(document.labels_dict.values()).index(sentence.label)]
-                          if sentence.label in document.labels_dict.values()
-                          else len(document.labels_dict.keys()) for sentence in document.validation.sentences]
-
-document.train.make_word2vec_for_rnn(args, 5)
-rnn = RNN(args.word2vec_vec_size_for_rnn, args.hidden_layer, len(document.labels_dict))
-#rnn = RNN(args.word2vec_vec_size_for_rnn,args.hidden_layer, 2, len(document.labels_dict))
-training = TrainValidate(args,document,rnn)
-eval_rnn[f'y_pred_{document.train.word2vec_model_name}_{args.lr}_{args.hidden_layer}'] = training.main(continue_training=False, decay_learning=False)
-
-
 
 #%% word2vec kmeans
 word2vec_for_kmeans_model = Word2Vec(min_count=args.min,
@@ -97,15 +85,22 @@ _=word2vec_for_kmeans_model.train(train_tokens, total_examples=word2vec_for_kmea
 
 word2vec_centroids=word2vec_kmeans(document,args,word2vec_for_kmeans_model, args.word2vec_vec_size_for_kmeans)
 
-#pickle.dump(word2vec_for_kmeans_model, open("word2vec_for_kmeans_model.pkl", "wb"))
 word2vec_for_kmeans_model.save("word2vec_for_kmeans_model.model")
 
 
 
 # %% RNN classification
-# need to save word2vec_model_for_rnn
-# need to save rnn_model
-# need to save the train set's labels_dict
+
+eval_rnn = pd.DataFrame()
+eval_rnn['y_true'] = [list(document.labels_dict.keys())[list(document.labels_dict.values()).index(sentence.label)]
+                          if sentence.label in document.labels_dict.values()
+                          else len(document.labels_dict.keys()) for sentence in document.validation.sentences]
+
+document.train.make_word2vec_for_rnn(args, 5)
+rnn = RNN(args.word2vec_vec_size_for_rnn, args.hidden_layer, len(document.labels_dict))
+#rnn = RNN(args.word2vec_vec_size_for_rnn,args.hidden_layer, 2, len(document.labels_dict))
+training = TrainValidate(args,document,rnn)
+eval_rnn[f'y_pred_{document.train.word2vec_model_name}_{args.lr}_{args.hidden_layer}'] = training.main(continue_training=False, decay_learning=False)
 
 
 
@@ -124,7 +119,6 @@ rnn = RNN(args.word2vec_vec_size_for_rnn, args.hidden_layer, len(document.labels
 #rnn = RNN(args.word2vec_vec_size_for_rnn,args.hidden_layer, 2, len(document.labels_dict))
 training = TrainValidate(args,document,rnn)
 eval_rnn[f'y_pred_{document.train.word2vec_model_name}_{args.lr}_{args.hidden_layer}'] = training.main(continue_training=False, decay_learning=False)
-
 
 
 document.train.make_word2vec_for_rnn(args,5)
@@ -148,7 +142,7 @@ pickle.dump(tfidf_model, open("tfidf_model.pkl", "wb"))
 #%% random forest classification
 train_labels = [sentence.label for sentence in document.train.sentences]
 validation_labels = [sentence.label for sentence in document.validation.sentences]
-n_estimators_list=[10,100,200,300,400,500,1000]
+n_estimators_list=[100,200,300,400,500,1000,3000,5000]
 validation_scores=list()
 for n_estimators in n_estimators_list:
     random_forest_model = RandomForestClassifier(n_estimators=n_estimators,criterion='gini',max_depth=None,bootstrap=True,random_state=0)
@@ -158,9 +152,8 @@ for n_estimators in n_estimators_list:
     print("Random forest with TF-IDF enbeddings score of n_estimator=" + str(n_estimators)+ " is " + str(validation_score))
 
 best_n_estimator=n_estimators_list[np.argmax(validation_scores)]
+print("the best n_estimator is "+ str(best_n_estimator) + "with score of "+ str(np.argmax(validation_scores)))
 random_forest_chosen_model=RandomForestClassifier(n_estimators=n_estimators,criterion='gini',max_depth=None,bootstrap=True,random_state=0)
 _ = random_forest_chosen_model.fit(document.train.tfidf, train_labels)
 
 pickle.dump(random_forest_chosen_model, open("random_forest_model.pkl", "wb"))
-
-
