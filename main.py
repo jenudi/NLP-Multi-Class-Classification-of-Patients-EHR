@@ -83,7 +83,7 @@ train_tokens = document.train.get_sentences_tokens()
 _=word2vec_for_kmeans_model.build_vocab(train_tokens)
 _=word2vec_for_kmeans_model.train(train_tokens, total_examples=word2vec_for_kmeans_model.corpus_count, epochs=30)
 
-word2vec_centroids=word2vec_kmeans(document,args,word2vec_for_kmeans_model, args.word2vec_vec_size_for_kmeans)
+word2vec_centroids=word2vec_kmeans(document,args,word2vec_for_kmeans_model, args.word2vec_vec_size_for_kmeans,t_sne=True)
 
 word2vec_for_kmeans_model.save("word2vec_for_kmeans_model.model")
 
@@ -134,7 +134,7 @@ random.shuffle(document.validation.sentences)
 
 tfidf_model = TfidfVectorizer(min_df=args.min,smooth_idf=True,norm='l1')
 tfidf_trained = tfidf_model.fit(document.train.get_sentences())
-tfidf_centroids = tfidf_kmeans(document,args,tfidf_model)
+tfidf_centroids = tfidf_kmeans(document,args,tfidf_model,t_sne=True)
 
 pickle.dump(tfidf_model, open("tfidf_model.pkl", "wb"))
 
