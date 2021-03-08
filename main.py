@@ -1,58 +1,12 @@
-from RNN import *
+from preprocessing import *
 from classes import *
 from kmeans import *
+from RNN import *
 from sklearn.feature_extraction.text import TfidfVectorizer
 from gensim.models.word2vec import Word2Vec
 from sklearn.ensemble import RandomForestClassifier
-import random, pickle
 from sklearn.metrics import f1_score
-import seaborn as sns
-sns.set(rc={'figure.figsize': (11.7, 8.27)}, style="darkgrid")
 
-
-def make_data(threshold_for_dropping=0):
-    encounter_data = pd.read_csv("encounter.csv").rename(str.lower, axis='columns')
-    data = encounter_data.loc[:, ['soap_note', 'cc']]
-    data.dropna(inplace=True, subset=['soap_note'])
-    data.reset_index(drop=True, inplace=True)
-    data['cc'].fillna('no specific issue', inplace=True)
-    data['cc'] = data['cc'].str.lower()
-    if threshold_for_dropping > 0:
-        temp_dict = data['cc'].value_counts().to_dict()
-        temp_list = [index for index, rare_labels in enumerate(data['cc'].values)
-                     if temp_dict[rare_labels] <= threshold_for_dropping]
-        data.drop(temp_list, inplace=True)
-        data.reset_index(drop=True, inplace=True)
-    data.sort_values('cc',inplace=True)
-    data.reset_index(drop=True, inplace=True)
-    return data
-
-
-def preprocess_data(data):
-    soap = data['soap_note']
-    soap_temp = [re.split('o:''|''o :', i) for i in soap]  # split by "o:" or "o :"
-    temp_sentences = [i[0].strip().strip('s:').lower() for i in soap_temp]
-    try:
-        _ = stopwords.words("english")
-    except LookupError:
-        import nltk
-        nltk.download('stopwords')
-    stopword_set = set(stopwords.words("english"))
-    document_ = Document('\n '.join(temp_sentences))
-    document_.do_replaces()
-    document_.make_sentences('\n ')
-    for index,sentence in enumerate(document_.sentences):
-        sentence.label=data['cc'][index]
-        sentence.stem_and_check_stop(stopword_set)
-        sentence.make_tokens()
-        sentence.make_original_text_tokens()
-        sentence.text = ' '.join(sentence.tokens)
-    document_.train_test_split()
-    document_.train.make_lexicon()
-    document_.make_dict()
-    pickle.dump(document_.labels_dict,open("labels_dict.pkl", "wb"))
-    print('Classes are ready to use\n')
-    return document_
 
 
 #%% initializing NLP arguments and data
@@ -95,8 +49,7 @@ for model in args.models:
     eval_rnn[f'y_pred_{document.train.word2vec_model_name}_{args.lr}_{args.hidden_layer}'] = training.main(continue_training=False,
                                                                                                            decay_learning=False)
 
-
-#f1_score(eval_rnn.iloc[:,0], eval_rnn.iloc[:,1], average='micro')
+#random_forest_test_score=f1_score(eval_rnn.iloc[:,0], eval_rnn.iloc[:,1], average='micro')
 
 
 #%%TF-IDF kmeans
@@ -121,9 +74,8 @@ random_forest_validation_scores=list()
 for n_estimators in n_estimators_list:
     random_forest_model = RandomForestClassifier(n_estimators=n_estimators, criterion='gini', max_depth=None, bootstrap=True, class_weight="balanced_subsample", random_state=0)
     _ = random_forest_model.fit(document.train.tfidf,train_labels)
-    #validation_score=random_forest_model.score(document.validation.tfidf,validation_labels)
-    y_pred=random_forest_model.predict(document.validation.tfidf)
-    random_forest_score=f1_score(validation_labels,y_pred,average='micro')
+    predicted_validation_labels=random_forest_model.predict(document.validation.tfidf)
+    random_forest_score=f1_score(validation_labels,predicted_validation_labels,average='micro')
     random_forest_validation_scores.append(random_forest_score)
     print("Random forest with TF-IDF enbeddings score of n_estimator=" + str(n_estimators)+ " is " + str(random_forest_score))
 
@@ -136,6 +88,6 @@ pickle.dump(chosen_random_forest_model, open("random_forest_model.pkl", "wb"))
 
 document.test.make_tfidf(tfidf_trained)
 test_labels = [sentence.label for sentence in document.test.sentences]
-y_pred = chosen_random_forest_model.predict(document.test.tfidf)
-random_forest_test_score=f1_score(test_labels,y_pred,average='micro')
+predicted_test_labels = chosen_random_forest_model.predict(document.test.tfidf)
+random_forest_test_score=f1_score(test_labels,predicted_test_labels,average='micro')
 print("test score of random forest is " + str(random_forest_test_score))
