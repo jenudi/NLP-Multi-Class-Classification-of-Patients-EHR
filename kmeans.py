@@ -6,6 +6,7 @@ from classes import *
 from collections import Counter
 
 
+
 def make_tsne(model, model_name, labels,clusters_list):
     fig = plt.figure()
     tsne = TSNE()
@@ -19,28 +20,6 @@ def make_tsne(model, model_name, labels,clusters_list):
         plt.text(centers.iloc[i,0],centers.iloc[i,1],clusters_list[i],size=7,weight="extra bold")
     plt.show()
 
-
-def print_sentences_by_clusters(document, clusters_dict, validation_predict):
-    for key in clusters_dict.keys():
-        if key in validation_predict:
-            validation_sentences_indexes_in_cluster = [index for index, value in enumerate(validation_predict) if
-                                                       value == key]
-            print(
-                f'Validation sentences in cluster number {key + 1}, number of sentences: {len(validation_sentences_indexes_in_cluster)}\n')
-            for sentence_index in validation_sentences_indexes_in_cluster:
-                print(document.test.get_original_sentences()[sentence_index])
-        else:
-            print(f'No validation sentences in cluster number {key + 1}\n')
-        print('\n')
-        print(f'Train sentences in cluster number {key + 1}, size of cluster: {len(clusters_dict[key])} \n')
-        sentences_printed = 0
-        for index in clusters_dict[key]:
-            print(document.train.get_original_sentences()[index])
-            sentences_printed += 1
-            if sentences_printed > 15:
-                break
-        print('\n')
-        print('\n')
 
 
 def word2vec_kmeans(document,args,word2vec_model, vector_size,model_name,print_sentences=False,t_sne=False):
@@ -78,7 +57,6 @@ def word2vec_kmeans(document,args,word2vec_model, vector_size,model_name,print_s
 
         make_tsne(document.train.word2vec_for_kmeans, model_name,document.train.word2vec_clusters,most_common_label_in_clusters)
 
-
     if print_sentences:
         print(f'Clusters number = {args.k}')
         word2vec_clusters_dict = document.train.clusters_to_sentences_indexes_dict(document.train.word2vec_clusters,
@@ -86,6 +64,7 @@ def word2vec_kmeans(document,args,word2vec_model, vector_size,model_name,print_s
         print_sentences_by_clusters(document, word2vec_clusters_dict,document.test.word2vec_clusters)
 
     return word2vec_centroids
+
 
 
 def tfidf_kmeans(document,args,tfidf_trained_model, print_sentences=False, t_sne=False):
@@ -128,3 +107,27 @@ def tfidf_kmeans(document,args,tfidf_trained_model, print_sentences=False, t_sne
                                     document.test.tfidf_clusters)
 
     return kmeans_tfidf_model.cluster_centers_
+
+
+
+def print_sentences_by_clusters(document, clusters_dict, validation_predict):
+    for key in clusters_dict.keys():
+        if key in validation_predict:
+            validation_sentences_indexes_in_cluster = [index for index, value in enumerate(validation_predict) if
+                                                       value == key]
+            print(
+                f'Validation sentences in cluster number {key + 1}, number of sentences: {len(validation_sentences_indexes_in_cluster)}\n')
+            for sentence_index in validation_sentences_indexes_in_cluster:
+                print(document.test.get_original_sentences()[sentence_index])
+        else:
+            print(f'No validation sentences in cluster number {key + 1}\n')
+        print('\n')
+        print(f'Train sentences in cluster number {key + 1}, size of cluster: {len(clusters_dict[key])} \n')
+        sentences_printed = 0
+        for index in clusters_dict[key]:
+            print(document.train.get_original_sentences()[index])
+            sentences_printed += 1
+            if sentences_printed > 15:
+                break
+        print('\n')
+        print('\n')

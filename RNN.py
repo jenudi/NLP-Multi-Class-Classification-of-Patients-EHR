@@ -160,6 +160,3 @@ class TrainValidate:
     def clac_param(self):
         print(f"total parameters: {sum(p.numel() for p in self.rnn_model.parameters())}")
         print(f"trainable parameters: {sum(p.numel() for p in self.rnn_model.parameters() if p.requires_grad)}")
-
-
-
