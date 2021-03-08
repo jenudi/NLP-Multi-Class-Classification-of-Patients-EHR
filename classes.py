@@ -1,19 +1,19 @@
 import numpy as np
-import re
-import random
 from collections import OrderedDict
 from nltk.stem.porter import PorterStemmer
-from nltk.corpus import stopwords
-import pandas as pd
-import torch
+import torch, re
 from itertools import groupby
 from gensim.models.word2vec import Word2Vec
 from gensim.models.keyedvectors import KeyedVectors
+from nltk.corpus import stopwords
+import pandas as pd
 
 
 class NLP_args:
+
     def __init__(self, k=30, min=0.0, random=0, min_cls=5,
-                 word2vec_vec_size_for_kmeans=300, lr=0.0002, hidden_layer=200, epoch_num=15):
+                 word2vec_vec_size_for_kmeans=300,
+                 lr=0.0002, hidden_layer=200, epoch_num=15):
         self.k = k
         self.min = min
         self.random = random
@@ -24,7 +24,7 @@ class NLP_args:
         self.hidden_layer = hidden_layer
         self.word2vec_vec_size_for_rnn = 300
         self.epoch_num = epoch_num
-        self.l2 = 0.01
+        self.l2 = 0.005
 
 
 class Document:
@@ -182,31 +182,6 @@ class Document_set:
                 print('No such model file')
                 return
         self.word2vec_for_rnn = word2vec_model
-
-    def make_random_sample_for_rnn(self,model,model_name,dict,cls_l,index=None):
-        if index is None:
-            temp_list = list(np.where(np.array(cls_l) ==
-                                      random.randrange(0, len(dict))))[0].tolist()
-            random.shuffle(temp_list)
-            index = temp_list[0]
-        tokens = self.get_sentences_tokens()[index]
-        label = self.sentences[index].label
-        sentence = self.get_original_sentences()[index]
-        if model_name == 'w2v_p':
-            input_tensor = torch.zeros(len(tokens), 1, 200)
-        else:
-            input_tensor = torch.zeros(len(tokens), 1, 300)
-        position = list(dict.values()).index(label)
-        for i, v in enumerate(tokens):
-            try:
-                numpy_copy = model.wv[v].copy()
-            except KeyError:
-                if model_name == 'w2v_p':
-                    numpy_copy = np.zeros(200)
-                else:
-                    numpy_copy = np.zeros(300)
-            input_tensor[i][0][:] = torch.from_numpy(numpy_copy)
-        return label, input_tensor, list(dict.keys())[position], sentence
 
     def clusters_to_sentences_indexes_dict(self,clusters,num_of_clusters):
         clusters_sentences_indexes_dict=dict()

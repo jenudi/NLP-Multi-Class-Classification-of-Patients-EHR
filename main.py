@@ -1,20 +1,12 @@
-# %% Imports
-
 from RNN import *
 from classes import *
 from kmeans import *
 from sklearn.feature_extraction.text import TfidfVectorizer
 from gensim.models.word2vec import Word2Vec
-from sklearn.cluster import KMeans
-from gensim.models.keyedvectors import KeyedVectors
-from matplotlib import pyplot as plt
-from sklearn.manifold import TSNE
-import seaborn as sns
 from sklearn.ensemble import RandomForestClassifier
-import random
-import pickle
+import random, pickle
 from sklearn.metrics import f1_score
-
+import seaborn as sns
 sns.set(rc={'figure.figsize': (11.7, 8.27)}, style="darkgrid")
 
 
@@ -64,19 +56,14 @@ def preprocess_data(data):
 
 
 #%% initializing NLP arguments and data
-args = NLP_args(k=30, min=0.0, random=0,min_cls=5,lr=0.001, hidden_layer=400,epoch_num=30)
+args = NLP_args(k=30, min=0.0, random=0,min_cls=5,lr=0.001, hidden_layer=400,epoch_num=50)
 data = make_data(threshold_for_dropping=args.min_cls)
 document=preprocess_data(data)
 
 
 #%% word2vec kmeans
-word2vec_for_kmeans_model = Word2Vec(min_count=args.min,
-                                    window=5,
-                                    size=args.word2vec_vec_size_for_kmeans,
-                                    sample=1e-3,
-                                    alpha=0.03,
-                                    min_alpha=0.0007)
-
+word2vec_for_kmeans_model = Word2Vec(min_count=args.min,window=5,size=args.word2vec_vec_size_for_kmeans,
+                                    sample=1e-3,alpha=0.03,min_alpha=0.0007)
 
 train_tokens = document.train.get_sentences_tokens()
 _=word2vec_for_kmeans_model.build_vocab(train_tokens)
@@ -94,12 +81,6 @@ eval_rnn['y_true'] = [list(document.labels_dict.keys())[list(document.labels_dic
                           if sentence.label in document.labels_dict.values()
                           else len(document.labels_dict.keys()) for sentence in document.validation.sentences]
 
-document.train.make_word2vec_for_rnn(args, 5)
-rnn = RNN(args.word2vec_vec_size_for_rnn, args.hidden_layer, len(document.labels_dict))
-#rnn = RNN(args.word2vec_vec_size_for_rnn,args.hidden_layer, 2, len(document.labels_dict))
-training = TrainValidate(args,document,rnn)
-eval_rnn[f'y_pred_{document.train.word2vec_model_name}_{args.lr}_{args.hidden_layer}'] = training.main(continue_training=False, decay_learning=False)
-
 
 for model in args.models:
     if model == 'w2v_3':
@@ -109,17 +90,13 @@ for model in args.models:
     elif model == 'w2v_p':
         args.word2vec_vec_size_for_rnn = 200
         document.train.make_word2vec_for_rnn(args, None)
+    rnn = RNN(args.word2vec_vec_size_for_rnn, args.hidden_layer, len(document.labels_dict))
+    training = TrainValidate(args,document,rnn)
+    eval_rnn[f'y_pred_{document.train.word2vec_model_name}_{args.lr}_{args.hidden_layer}'] = training.main(continue_training=False,
+                                                                                                           decay_learning=False)
 
 
-document.train.make_word2vec_for_rnn(args, 5)
-#rnn = RNN(args.word2vec_vec_size_for_rnn, args.hidden_layer, len(document.labels_dict))
-#rnn = RNN(args.word2vec_vec_size_for_rnn,args.hidden_layer, 2, len(document.labels_dict))
-#training = TrainValidate(args,document,rnn)
-#eval_rnn[f'y_pred_{document.train.word2vec_model_name}_{args.lr}_{args.hidden_layer}'] = training.main(continue_training=False, decay_learning=False)
-
-
-document.train.make_word2vec_for_rnn(args,5)
-document.train.word2vec_for_rnn.save("word2vec_for_rnn_model.model")
+#f1_score(eval_rnn.iloc[:,0], eval_rnn.iloc[:,1], average='micro')
 
 
 #%%TF-IDF kmeans

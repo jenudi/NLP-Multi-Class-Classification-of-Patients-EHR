@@ -13,42 +13,17 @@ class RNN(nn.Module):
         self.i2h = nn.Linear(input_size+ hidden_size,hidden_size)
         self.i2o = nn.Linear(input_size+ hidden_size,output_size)
         self.dropout = nn.Dropout(0.2)
-        #self.softmax = nn.LogSoftmax(dim=1)
 
     def forward(self, input_tensor, hidden_tensor):
         combined = torch.cat((input_tensor,hidden_tensor),1)
         hidden = self.i2h(combined)
         output = self.i2o(combined)
         output = self.dropout(output)
-        #output = self.softmax(output)
         return output, hidden
 
     def init_hidden(self):
         return torch.zeros(1,self.hidden_size)
-    
-"""
 
-class RNN(nn.Module):
-    def __init__(self, input_size,hidden_size, num_layers, num_classes):
-        super(RNN, self).__init__()
-        self.hidden_size = hidden_size
-        self.num_layers = num_layers
-        self.sequence_length = 1
-        self.rnn = nn.RNN(input_size, hidden_size, num_layers, batch_first=True)
-        self.fc = nn.Linear(hidden_size * self.sequence_length, num_classes)
-
-    def forward(self, x):
-        # Set initial hidden and cell states
-        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size)
-
-        # Forward propagate LSTM
-        out, _ = self.rnn(x, h0)
-        out = out.reshape(out.shape[0], -1)
-
-        # Decode the hidden state of the last time step
-        out = self.fc(out)
-        return out
-"""
 
 class RecordsDataset(Dataset):
     def __init__(self, dataset, doc):
@@ -59,12 +34,13 @@ class RecordsDataset(Dataset):
         self.dict = doc.labels_dict
 
     def __getitem__(self, index):
-        tokens = self.dataset.get_sentences_tokens()[index]
         label = self.dataset.sentences[index].label
         sentence = self.dataset.get_original_sentences()[index]
         if self.model_name == 'w2v_p':
+            tokens = self.dataset.get_original_text_sentences_tokens()[index]
             input_tensor = torch.zeros(len(tokens), 1, 200)
         else:
+            tokens = self.dataset.get_sentences_tokens()[index]
             input_tensor = torch.zeros(len(tokens), 1, 300)
         position = list(self.dict.values()).index(label)
         for i, v in enumerate(tokens):
@@ -158,7 +134,6 @@ class TrainValidate:
             self.training_loss += loss
             loss.backward()
             self.optimizer.step()
-        #print(f"Train: epoch: {epoch_ndx}, loss: {self.training_loss / len(train_dl):.4f}\n")
         return self.training_loss
 
     def validation(self, epoch_ndx, val_dl):
@@ -173,17 +148,12 @@ class TrainValidate:
         return self.val_loss
 
     def compute_loss(self, batch_ndx, batch_tup, batch_size):
-        #loss_func = nn.NLLLoss(weight=self.class_weights)
         loss_func = nn.CrossEntropyLoss(weight=self.class_weights)
         input, target = batch_tup
         target = torch.reshape(target, (-1,))
-        #self.rnn_model.sequence_length = input.size(1)
-        #target_ = target.to(self.device, non_blocking=True)
-        #input_ = input.to(self.device).squeeze(2)
         hidden = self.rnn_model.init_hidden()
         for i in range(input.size(1)):
             output, hidden = self.rnn_model(input[0][i], hidden)
-        #output = self.rnn_model(input.squeeze(2))
         loss = loss_func(output, target)
         return loss, output
 

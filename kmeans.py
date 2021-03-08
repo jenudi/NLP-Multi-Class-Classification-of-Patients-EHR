@@ -5,6 +5,7 @@ import seaborn as sns
 from classes import *
 from collections import Counter
 
+
 def make_tsne(model, model_name, labels,clusters_list):
     fig = plt.figure()
     tsne = TSNE()
