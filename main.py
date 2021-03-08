@@ -15,6 +15,7 @@ data = make_data(threshold_for_dropping=args.min_cls)
 document=preprocess_data(data)
 
 
+
 #%% word2vec kmeans
 word2vec_for_kmeans_model = Word2Vec(min_count=args.min,window=5,size=args.word2vec_vec_size_for_kmeans,
                                     sample=1e-3,alpha=0.03,min_alpha=0.0007)
@@ -29,12 +30,12 @@ word2vec_centroids=word2vec_kmeans(document,args,word2vec_for_kmeans_model, args
 word2vec_for_kmeans_model.save("word2vec_for_kmeans_model.model")
 
 
+
 # %% RNN classification
 eval_rnn = pd.DataFrame()
 eval_rnn['y_true'] = [list(document.labels_dict.keys())[list(document.labels_dict.values()).index(sentence.label)]
                           if sentence.label in document.labels_dict.values()
                           else len(document.labels_dict.keys()) for sentence in document.validation.sentences]
-
 
 for model in args.models:
     if model == 'w2v_3':
@@ -52,6 +53,7 @@ for model in args.models:
 #random_forest_test_score=f1_score(eval_rnn.iloc[:,0], eval_rnn.iloc[:,1], average='micro')
 
 
+
 #%%TF-IDF kmeans
 random.shuffle(document.train.sentences)
 random.shuffle(document.test.sentences)
@@ -63,6 +65,7 @@ tfidf_trained = tfidf_model.fit(document.train.get_sentences())
 tfidf_centroids = tfidf_kmeans(document,args,tfidf_model,t_sne=True)
 
 pickle.dump(tfidf_model, open("tfidf_model.pkl", "wb"))
+
 
 
 #%% random forest classification
