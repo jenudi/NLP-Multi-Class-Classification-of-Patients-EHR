@@ -190,7 +190,7 @@ After reviewing the models k-means clustering, it seems that st-w2v3 performs we
 
 The first model that we use for training our models is Recurrent Neural Network (RNN). The advantage of RNN is that it &quot;remembers&quot; every output of a token. The basic idea of RNN represented in the following figure [2]:
 
-![rnn1](images/rnn1.png)
+![rnn1](images/rnn1.jpg)
 
 _t_ is the token sequence(record) index. _t=0_ is the first token, _t+1_ the next token, and so on. For each token step, we generate output that gets fed into the network again. That&#39;s how RNN is &quot;remembering&quot; the previous outputs, and with these outputs, we generate a new output until all the sequence is fed.
 
