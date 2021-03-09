@@ -6,7 +6,6 @@ from classes import *
 from collections import Counter
 
 
-
 def make_tsne(model, model_name, labels,clusters_list):
     fig = plt.figure()
     tsne = TSNE()
@@ -19,7 +18,6 @@ def make_tsne(model, model_name, labels,clusters_list):
     for i in range(30):
         plt.text(centers.iloc[i,0],centers.iloc[i,1],clusters_list[i],size=7,weight="extra bold")
     plt.show()
-
 
 
 def word2vec_kmeans(document,args,word2vec_model, vector_size,model_name,print_sentences=False,t_sne=False):
@@ -66,7 +64,6 @@ def word2vec_kmeans(document,args,word2vec_model, vector_size,model_name,print_s
     return word2vec_centroids
 
 
-
 def tfidf_kmeans(document,args,tfidf_trained_model, print_sentences=False, t_sne=False):
 
     document.train.make_tfidf(tfidf_trained_model)
@@ -107,7 +104,6 @@ def tfidf_kmeans(document,args,tfidf_trained_model, print_sentences=False, t_sne
                                     document.test.tfidf_clusters)
 
     return kmeans_tfidf_model.cluster_centers_
-
 
 
 def print_sentences_by_clusters(document, clusters_dict, validation_predict):

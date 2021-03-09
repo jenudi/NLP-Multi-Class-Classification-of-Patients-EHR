@@ -6,8 +6,6 @@ import re
 from itertools import groupby
 from gensim.models.word2vec import Word2Vec
 from gensim.models.keyedvectors import KeyedVectors
-from nltk.corpus import stopwords
-import pandas as pd
 
 
 class NLP_args:
