@@ -219,7 +219,7 @@ For each of our two word2vec representations we trained our RNN for 50 epochs wi
 
 1. RNN with self-trained word2vec with window 5:
 
-![loss1](images/loss1.png)
+![loss2](images/loss2.png)
 
 Models loss interpretation after training
 
