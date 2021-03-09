@@ -55,7 +55,7 @@ We divide our records into three sets: train, validation, test with correspondin
 
 Our dataset shows a significant imbalance between different classes. With 37% of the dataset, the most dominant class is &quot;no specific issue.&quot; With 0.18% of the dataset, the less dominant class is &quot;mild headaches particularly at the back of the head and in the morning
 
-For fixing this imbalance, we used a varied method which will be explained later.
+For fixing the imbalance, we used a method that will be explained later on.
 
 3. Preprocessing
 
@@ -207,7 +207,7 @@ loss(_x_,_class_) = _weight_[_class_] (−_x_[_class_]+log(∑exp(_x_[_j_])))
 
 Our models have 316,852 trainable parameters, and we use Stochastic gradient descent (SGD) algorithm to update the parameters based on the computed gradients. We pass to the optimizer algorithm a weight decay (L2 penalty = 0.01) to avoid overfitting.
 
-To further control the complexity of our model and avoid overfitting, we use a one dropout layer with a probability of 0.2, as shown in the following figure, the dropout layer purpose is to balance the network so that every node works equally toward the same goal, and if one makes a mistake, it won&#39;t dominate the behavior of your model.
+To further control the complexity of our model and avoid overfitting, we use a one dropout layer with a probability of 0.2, as shown in the following figure, the dropout layer purpose is to balance the network so that every node works equally toward the same goal, and if one makes a mistake, it won’t dominate the behavior of the model.
 
 ![](RackMultipart20210308-4-tzspo8_html_a2186e679eac3508.png)
 
