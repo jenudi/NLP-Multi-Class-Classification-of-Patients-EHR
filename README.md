@@ -140,7 +140,7 @@ The results are presented in the following figures:
 
 1. **K-means clustering of the word2vec window=3, vector size=300**
 
-![](RackMultipart20210308-4-tzspo8_html_bd5050660da64003.png)
+![kmeansw2v_3](images/kmeans1.png)
 
 In the first model (st-w2v3), we can see some interesting findings. The clustered clusters in the upper right are embolic stroke, hemorrhagic stroke, and pyelonephritis. The similarity between embolic and hemorrhagic stroke is well understood. However, we won&#39;t expect any association with pyelonephritis symptoms. Moreover, we can see other clusters of hemorrhagic stroke records appearing on the upper left side of the figure.
 
@@ -152,7 +152,7 @@ The last clusters to be noticed in this model are middle-down on the figure, whe
 
 2. **K-means clustering of the word2vec window=5, vector size=300**
 
-![](RackMultipart20210308-4-tzspo8_html_9db9d99782ce892f.png)
+![kmeansw2v_5](images/kmeans2.png)
 
 In the following model (st-w2v5), we can observe that each cluster is more unified in its centroids than the st-w2v3 model. Regarding the clinical similarities between different clusters, in the upper-middle, we observe some clusters, embolic stroke, severe weight loss, and moderate discomfort with movement, which do not share common clinical symptoms.
 
@@ -164,7 +164,7 @@ Furthermore, in the middle-down, we again see the clusters that are matched toge
 
 3. **K-means clustering of the PubMed word2vec, vector size=200**
 
-![](RackMultipart20210308-4-tzspo8_html_d209a8898ecdec9d.png)
+![kmeansw2v_p](images/kmeans3.png)
 
 The third figure represents the PubMed model. In general, we observe a more spread-like shape of the clusters than the st-w2v5 model and many clusters CCs regarding the Nephro-Urology domain.
 
@@ -172,7 +172,7 @@ We can see some clinical similarities of pyelonephritis and acute renal failure 
 
 4. **K-means clustering of the TF-IDF, vector size=300**
 
-![](RackMultipart20210308-4-tzspo8_html_4ce974de3b2058f4.png)
+![kmeansw2v_tfidf](images/kmeans4.png)
 
 The last figure represents the TF-IDF model. The model looks purely clustered as its spread all over the figure, and clusters are mixed. On the upper-left side, we observe severe cough and shortness of breath clusters with clinical similarity and can be associated with asthma or upper respiratory infection symptoms. But there is no clinical association to foot pain.
 
@@ -190,7 +190,7 @@ After reviewing the models k-means clustering, it seems that st-w2v3 performs we
 
 The first model that we use for training our models is Recurrent Neural Network (RNN). The advantage of RNN is that it &quot;remembers&quot; every output of a token. The basic idea of RNN represented in the following figure [2]:
 
-![](RackMultipart20210308-4-tzspo8_html_11a73550f8be75cd.jpg)
+![rnn1](images/rnn1.png)
 
 _t_ is the token sequence(record) index. _t=0_ is the first token, _t+1_ the next token, and so on. For each token step, we generate output that gets fed into the network again. That&#39;s how RNN is &quot;remembering&quot; the previous outputs, and with these outputs, we generate a new output until all the sequence is fed.
 
@@ -209,17 +209,17 @@ Our models have 316,852 trainable parameters, and we use Stochastic gradient des
 
 To further control the complexity of our model and avoid overfitting, we use a one dropout layer with a probability of 0.2, as shown in the following figure, the dropout layer purpose is to balance the network so that every node works equally toward the same goal, and if one makes a mistake, it won’t dominate the behavior of the model.
 
-![](RackMultipart20210308-4-tzspo8_html_a2186e679eac3508.png)
+![rnn2](images/rnn2.png)
 
 For each of our two word2vec representations we trained our RNN for 50 epochs with learning rate of 0.001 on the training set and fine-tuned hyper-parameters according the performance on the validation set:
 
 1. RNN with self-trained word2vec with window 3:
 
-![](RackMultipart20210308-4-tzspo8_html_9c79bb7f13c656e6.png)
+![loss1](images/loss1.png)
 
 1. RNN with self-trained word2vec with window 5:
 
-![](RackMultipart20210308-4-tzspo8_html_c88976bd2c55a564.png)
+![loss1](images/loss1.png)
 
 Models loss interpretation after training
 
