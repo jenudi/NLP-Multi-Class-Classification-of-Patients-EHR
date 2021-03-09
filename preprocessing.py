@@ -2,7 +2,7 @@ from classes import *
 import seaborn as sns
 import random
 import pickle
-
+import pandas as pd
 
 sns.set(rc={'figure.figsize': (11.7, 8.27)}, style="darkgrid")
 

@@ -6,7 +6,6 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from gensim.models.word2vec import Word2Vec
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import f1_score
-import pandas as pd
 
 
 class InitModels:
