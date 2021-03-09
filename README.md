@@ -2,9 +2,7 @@
 
 *Faculty of Engineering, Tel Aviv University, March, 2021*
 
-Yonatan Jenudi, MD [linkedin](linkedin.com/in/yjenudi)
-
-Elad Gashri [linkedin](linkedin.com/in/elad-gashri-400582176)
+Yonatan Jenudi, MD [linkedin](linkedin.com/in/yjenudi), Elad Gashri [linkedin](linkedin.com/in/elad-gashri-400582176)
 
 **Abstract**
 
@@ -49,7 +47,7 @@ Chief Complaint (&quot;CC&quot;) - The main reason for an encounter or presentin
 
 The corresponding Chief Complaint of the above example: &quot;critical shortness of breath.&quot;
 
-1. Data Description
+2. Data Description
 
 To accomplish the project aims, we use an open-source dataset that contains 5,447 detailed Electronic Health Records (EHR) that describe encounters with healthcare professionals (physicians, nurses, pharmacists) and collected for over ten years. Among these EHR, we extract 3,352 &quot;SOAP&quot; notes which physicians wrote during the encounter with their corresponding Chief Complaint (&quot;CC&quot;). We decided to filter out rare CC (the threshold for dropping \&lt; 5 records per class), and therefore our final records/examples for training and testing are 3,320 with classified into 52 classes. The most common class is &#39;no specific issue&#39;. It refers to periodic physical examinations or scheduled appointments with no concrete reason.
 
@@ -59,7 +57,7 @@ Our dataset shows a significant imbalance between different classes. With 37% of
 
 For fixing this imbalance, we used a varied method which will be explained later.
 
-1. Preprocessing
+3. Preprocessing
 
 For our purpose, we decide to use only the S (Subjective) of the SOAP notes. The reason is that we wanted sentences that most resemble a patient-physician conversation. Preprocessing of the input records comprised the following steps:
 
@@ -95,13 +93,11 @@ For each text, the result was a 395 dimensional vector. 395 was the amount of wo
 
 We used Scikit-learn&#39;s tfidf-vectorizer in order to implement TF-IDF for our data.
 
-1. Word2Vec
+2. Word2Vec
 
-Word vectors are numerical vector representations of word semantics or meaning, including literal and implied meaning. So word vectors can capture the connotation of words, and they combine all that into a dense vector (no zeros) of floating-point values. This dense vector enables queries and logical reasoning. The Word2vec model contains information about the relationships between words,
+Word vectors are numerical vector representations of word semantics or meaning, including literal and implied meaning. So word vectors can capture the connotation of words, and they combine all that into a dense vector (no zeros) of floating-point values. This dense vector enables queries and logical reasoning. The Word2vec model contains information about the relationships between words, including similarity. [2]
 
-including similarity. [2]
-
-There are two possible ways to train Word2vec embeddings (2):
+There are two possible ways to train Word2vec embeddings:
 
 1. The skip-gram approach predicts the context of words (output words) from a word of interest (the input word).
 2. The continuous bag-of-words (CBOW) approach predicts the target word (the output word) from the nearby words (input words).
@@ -116,7 +112,7 @@ We use the gensim.word2vec module for training our models. Stop words carry mean
 
 Ⅳ**. Models Comparison in Unsupervised Learning (Clustering)**
 
-K-means
+*K-means*
 
 The objective of clustering is to identify distinct groups in a dataset such that the observations within a group are similar to each other but different from observations in other groups. In k-means clustering, we specify the number of desired clusters k, and the algorithm will assign each observation to exactly one of these k clusters. The algorithm optimizes the groups by minimizing the within-cluster variation (also known as inertia) such that the sum of the within cluster variations across all k clusters is as small as possible.
 
@@ -124,7 +120,7 @@ Different runs of k-means will result in slightly different cluster assignments 
 
 Typically, the k-means algorithm does several runs and chooses the run that has the best separation, defined as the lowest total sum of within-cluster variations across all k clusters. [3]
 
-t-distributed Stochastic Neighbor Embedding (t-SNE)
+*t-distributed Stochastic Neighbor Embedding (t-SNE)*
 
 t-SNE is a tool to visualize high-dimensional data. It converts similarities between data points to joint probabilities and tries to minimize the Kullback-Leibler divergence between the joint probabilities of the low-dimensional embedding and the high-dimensional data. t-SNE has a cost function that is not convex, i.e. with different initializations we can get different results. [4]
 
@@ -154,7 +150,7 @@ In the middle-right, we also view the clusters&#39; apparent clinical associatio
 
 The last clusters to be noticed in this model are middle-down on the figure, where mild lightheadedness can also be a symptom of embolic stroke.
 
-1. **K-means clustering of the word2vec window=5, vector size=300**
+2. **K-means clustering of the word2vec window=5, vector size=300**
 
 ![](RackMultipart20210308-4-tzspo8_html_9db9d99782ce892f.png)
 
@@ -166,7 +162,7 @@ In the middle of the figure, we notice the clusters of hemorrhagic stroke and bi
 
 Furthermore, in the middle-down, we again see the clusters that are matched together with some clinical sense, mild lightheadedness, and stroke.
 
-1. **K-means clustering of the PubMed word2vec, vector size=200**
+3. **K-means clustering of the PubMed word2vec, vector size=200**
 
 ![](RackMultipart20210308-4-tzspo8_html_d209a8898ecdec9d.png)
 
@@ -174,7 +170,7 @@ The third figure represents the PubMed model. In general, we observe a more spre
 
 We can see some clinical similarities of pyelonephritis and acute renal failure in the figures middle-left and middle-down. As we detected in the st-w2v5 model, the model cluster together severe bilateral foot pain and stroke. The clusters of hemorrhagic stroke and mild lightheadedness also centered together.
 
-1. **K-means clustering of the TF-IDF, vector size=300**
+4. **K-means clustering of the TF-IDF, vector size=300**
 
 ![](RackMultipart20210308-4-tzspo8_html_4ce974de3b2058f4.png)
 
@@ -184,7 +180,7 @@ The figure&#39;s middle-left clusters have mixed some CCs that have and do not h
 
 The model well clusters the amputations records in the middle-left and the diabetes symptoms CC in the right-down.
 
-1. Conclusions of the k-means clustering
+2. Conclusions of the k-means clustering
 
 After reviewing the models k-means clustering, it seems that st-w2v3 performs well for clustering together CCs with clinical similarities. st-w2v5 performs well in centering each cluster to its centroid, and the TF-IDF model also has a good result in clustering CCs with the clinical association. Hence, we decided to compare the following models with supervised learning: st-w2v3, st-w2v5, and TF-IDF, and to drop the PubMed model.
 
