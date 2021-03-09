@@ -1,16 +1,16 @@
 #### Multi-Class Classification of Patient&#39;s Electronic Health Records: Comparison of Supervised Models and Unsupervised Models
 
-_Faculty of Engineering, Tel Aviv University_ _      March, 2021_
+*Faculty of Engineering, Tel Aviv University, March, 2021*
 
-Yonatan Jenudi, MD                                                **         ** Elad Gashri
+Yonatan Jenudi, MD [linkedin](linkedin.com/in/yjenudi)
 
-[linkedin.com/in/yjenudi](https://www.linkedin.com/in/yjenudi)                                                                                     linkedin.com/in/elad-gashri-400582176
+Elad Gashri [linkedin](linkedin.com/in/elad-gashri-400582176)
 
 **Abstract**
 
-_The project compares NLP and ML models in regards to clustering and classification of electronic health records. The models included in the project are: Word2vec, TF-IDF, K-means, RNN, Random forest. _
+*The project compares NLP and ML models in regards to clustering and classification of electronic health records. The models included in the project are: Word2vec, TF-IDF, K-means, RNN, Random forest.*
 
-_A database in MongoDB stores the medical text data and final clusters. A REST API in Flask returns cluster data or predicted diagnosis for new medical text. _
+*A database in MongoDB stores the medical text data and final clusters. A REST API in Flask returns cluster data or predicted diagnosis for new medical text.*
 
 Ⅰ **. Introduction**
 
