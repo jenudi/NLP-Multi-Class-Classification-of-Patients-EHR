@@ -71,6 +71,8 @@ After the preprocessing stage, each record in an array or tokens looks like the 
 
 [&#39;patient&#39;, &#39;complain&#39;, &#39;critic&#39;, &#39;cough&#39;, &#39;time&#39;, &#39;3&#39;, &#39;week&#39;, &#39;known&#39;, &#39;drug&#39;, &#39;allergi&#39;, &#39;patient&#39;, &#39;femal&#39;, &#39;vicar&#39;, &#39;age&#39;, &#39;54&#39;, &#39;year&#39;, &#39;drink&#39;, &#39;alcohol&#39;, &#39;occasion&#39;, &#39;deni&#39;, &#39;ever&#39;, &#39;use&#39;, &#39;cigarett&#39;].
 
+After tokenization, the longest sentence contains 42 tokens and the average size is of a sentence is 18.5.
+
 Ⅲ **. Embedding Models**
 
 To train our records, we examine two embedding models:
@@ -195,23 +197,35 @@ The first model that we use for training our models is Recurrent Neural Network 
 _t_ is the token sequence(record) index. _t=0_ is the first token, _t+1_ the next token, and so on. For each token step, we generate output that gets fed into the network again. That&#39;s how RNN is &quot;remembering&quot; the previous outputs, and with these outputs, we generate a new output until all the sequence is fed.
 
 We build a simple RNN architecture with Pytorch module:
+1.	As mentioned, the longest sentence contains 42 tokens, hence, we padded with a vector of zeros (length 300) sentences to reach the max tokens length, so we stack them together as a batches.
+2.	For each of our word2vec models, we construct a tensor of size [batch size = 10, max sequence length=42, embedding vector length = 300]
+3.	Each tensor is composed of "mini" tensors that get into the net one by one. For each, we add the previous output (except the first tensor, that we add a zero-vector of the same size)
+4.	We use a hidden layer of size 300 (hyper-parameter)
+5.	After we finish a sequence, we compute the loss with the final output and back-propagate to update the net's weights matrices. 
 
-1. For each of our word2vec models, we construct a tensor of size [batch size = 1, sequence length, 1, embeddings vector length = 300]
-2. Each tensor is composed of &quot;mini&quot; tensors that get into the net one by one. For each, we add the previous output (except the first tensor, that we add a zero-vector of the same size)
-3. We use a hidden layer of size 400 (hyper-parameter)
-4. After we finish a sequence, we compute the loss with the final output and back-propagate to update the net&#39;s weights matrices.
 
 We have a multi-class imbalanced dataset so we use Cross-Entropy loss function, and pass into the function the classes weight to compute our losses.
 
 loss(_x_,_class_) = _weight_[_class_] (−_x_[_class_]+log(∑exp(_x_[_j_])))
 
-Our models have 316,852 trainable parameters, and we use Stochastic gradient descent (SGD) algorithm to update the parameters based on the computed gradients. We pass to the optimizer algorithm a weight decay (L2 penalty = 0.01) to avoid overfitting.
+Our models have 1,016,452 trainable parameters, two RNN layers, and we use Stochastic gradient descent (SGD) algorithm to update the parameters based on the computed gradients. We pass to the optimizer algorithm a weight decay (L2 penalty = 0.01) to avoid overfitting.
 
-To further control the complexity of our model and avoid overfitting, we use a one dropout layer with a probability of 0.2, as shown in the following figure, the dropout layer purpose is to balance the network so that every node works equally toward the same goal, and if one makes a mistake, it won’t dominate the behavior of the model.
+To further control the complexity of our model and avoid overfitting, we use a one dropout layer with a probability of 0.9, as shown in the following figure, the dropout layer purpose is to balance the network so that every node works equally toward the same goal, and if one makes a mistake, it won’t dominate the behavior of the model.
 
 ![rnn2](images/rnn2.png)
 
-For each of our two word2vec representations we trained our RNN for 50 epochs with learning rate of 0.001 on the training set and fine-tuned hyper-parameters according the performance on the validation set:
+For each of our two word2vec representations we trained our RNN for 500 epochs with learning rate of 0.001 on the training set and fine-tuned hyper-parameters according the performance on the validation set.
+Summary of hyper-parameters:
+•	hidden vector size length: 300
+•	number of RNN layers: 2
+•	learning rate: 0.001
+•	one dropout layer with probability: 0.9
+•	L2 penalty: 0.01
+•	embedding vector length: 300
+•	embedding window: 3 or 5
+•	max sequence length: 42
+•	batch size: 10
+•	epochs: 500
 
 1. RNN with self-trained word2vec with window 3:
 
@@ -223,13 +237,9 @@ For each of our two word2vec representations we trained our RNN for 50 epochs wi
 
 Models loss interpretation after training
 
-According to these figures, we observe that our models did improve in each epoch. Both of our models do not over-fit. When validated, the models without significant regularizations, the models were overfitted (did not record).
-
-We can see that after 20 epochs, the model&#39;s curves got into a plateau regarding their learning capabilities.
-
-And till the last epoch, the models did not improve much.
-
-The models seem to perform pretty much the same. Although the second model (st-w2v5) is slightly better, we can observe that its learning curve is more likely to converge. However, in our tests, both models did not fully converge.
+According to these figures, we observe that our models did improve in each epoch. Both of our models slightly over-fit. We kept training our models until there was not a significant improvement in the validation loss so we could maximize our scores.  
+We can see that after 80 epochs, the model's validation curves got into a plateau regarding their learning capabilities.
+The models seem to perform pretty much the same. Although the first model (st-w2v3) is slightly better, we can observe that its learning curve is more likely to converge. 
 
 1. TF-IDF &amp; Random Forest
 
@@ -253,17 +263,19 @@ The final micro f1 scores that were calculated over the test set are presented i
 
 | **Model** | **Micro-F Score** |
 | --- | --- |
-| RNN self-trained word2vec with w= 3 | 56.72% |
-| RNN self-trained word2vec with w= 5 | 61.65% |
+| RNN-CBOW  self-trained word2vec with w= 3 | 82.72% |
+| RNN-CBOW  self-trained word2vec with w= 5 | 81.65% |
 | Random Forest TF-IDF | 74.02% |
 
 We can observe that the Random Forest algorithm has the best performance with 74.02% micro f1.
 
-We also observe that window = 5 of the self-trained word2vec5 model is over-performed over window =3 of the self-trained word2vec3 model.
+We can observe that RNN-CBOW st-w2v3 has the best performance with 82.72% over the test set.
+We also observe that window = 3 of the self-trained word2vec3 model is over-performed over window =5 of the self-trained word2ve5 model.
 
-The main issue that we faced during the training is a significant imbalance of data. Since the proportion of one of the classes is almost 38% of all data (&quot;no specific issue&quot;), there are classes present in the data in less than 1%.
+The main issue that we faced during the training is a significant imbalance of data. Since the proportion of one of the classes is almost 38% of all data ("no specific issue"), there are classes present in the data in less than 1%. We tried to avoid the classes imbalance and overfitting by passing the weights of the classes to the loss function, L2 regularization and a dropout layer.
 
 As we trained our models using RNN, we faced a tradeoff. When we increased the net complexity to learn and converge more quickly, the models over-fitted. But when we decreased the model complexity, we had to give the models more epochs to learn, then the model was exposed more frequently to the most dominant class and under-fitted over the rare classes.
+
 
 Ⅵ **.**  **Server Side Development**
 
@@ -290,15 +302,15 @@ The API receives a POST request with a new medical text. There are 4 API endpoin
 
 Our main aim was to extract the chief complaint of electronic health records and compare different NLP models in this project. We review various models, algorithms, and techniques, some are supervised, and some are unsupervised methods. Our data contains SOAP notes and Chief Complaints about every note. We decided to use only the subjective part of SOAP notes because they resemble a physician-patient conversation.
 
-The first part preprocessed these SOAP notes and transformed them into a well-suited structure for the project&#39;s later steps.
+The first part preprocessed these SOAP notes and transformed them into a well-suited structure for the project's later steps. 
 
-The second part was to convert our tokens into embeddings form (vector representation of the word). Hence we compared two different approaches. TF-IDF and word2vec. The latter method was also evaluated using other models to convert our tokens into embeddings.
+The second part was to convert our tokens into embeddings form (vector representation of the word). Hence we compared two different approaches. TF-IDF and word2vec. The latter method was also evaluated using other models to convert our tokens into embeddings. 
+The third part was to initialize an unsupervised model to try to eliminate some of our models. We used K-means for clustering, t-SNE for dimension reduction and viewed how well the models get clustered. 
 
-The third part was to initialize an unsupervised model to try to eliminate some of our models. We used K-means for clustering, t-SNE for dimension reduction and viewed how well the models get clustered.
+After eliminating the PubMed pre-trained model, in the fourth part, we used an RNN-CBOW for classifying the word2vec models and Random forest algorithm for the TF-IDF model. The results showed that our project's best model to represent, classify, and extract the chief complaint from our data was RNN-CBOW self-trained word2vec of window size 3. 
 
-After eliminating the PubMed pre-trained model, in the fourth part, we used an RNN for classifying the word2vec models and Random forest algorithm for the TF-IDF model. The results showed that our project&#39;s best model to represent, classify, and extract the chief complaint from our data was TF-IDF with the Random Forest algorithm. The RNN did not perform well enough, and we link its performance due to class imbalance and a relatively simple RNN network prone to under fit over the rare classes and did not improve much.
+We conclude our project with a suggestion to further investigate this project's aim by using 2 or 3 n-grams, using long short-term memory (LSTM) or Gated recurrent unit (GRU), using a pre-trained RNN network (transfer learning), or use of sentences augmentation.
 
-We conclude our project with a suggestion to further investigate this project&#39;s aim by using more sophisticated approaches like adding hidden layers to the RNN, using long short-term memory (LSTM), or using a pre-trained RNN network (transfer learning).
 
 **VIII.**  **References**
 
