@@ -267,8 +267,6 @@ The final micro f1 scores that were calculated over the test set are presented i
 | RNN-CBOW  self-trained word2vec with w= 5 | 81.65% |
 | Random Forest TF-IDF | 74.02% |
 
-We can observe that the Random Forest algorithm has the best performance with 74.02% micro f1.
-
 We can observe that RNN-CBOW st-w2v3 has the best performance with 82.72% over the test set.
 We also observe that window = 3 of the self-trained word2vec3 model is over-performed over window =5 of the self-trained word2ve5 model.
 
