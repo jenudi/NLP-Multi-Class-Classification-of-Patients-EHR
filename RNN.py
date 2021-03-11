@@ -3,26 +3,32 @@ import torch.nn as nn
 from matplotlib import pyplot as plt
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
-
-
+import torch.nn.functional as F
+"""
+input_size = 300
+seq_len = 40
+num_layers = 2
+hidden_size = 400
+num_class = 52
+"""
 class RNN(nn.Module):
-
-    def __init__(self, input_size, hidden_size, output_size):
+    def __init__(self, input_size, seq_len,hidden_size, num_layers, num_classes):
         super(RNN, self).__init__()
         self.hidden_size = hidden_size
-        self.i2h = nn.Linear(input_size+ hidden_size,hidden_size)
-        self.i2o = nn.Linear(input_size+ hidden_size,output_size)
-        self.dropout = nn.Dropout(0.2)
+        self.num_layers = num_layers
+        self.rnn = nn.RNN(input_size, hidden_size, num_layers,batch_first=True)
+        #self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
+        self.fc = nn.Linear(hidden_size*seq_len,num_classes)
+        self.flat = nn.Flatten()
+        self.dropout = nn.Dropout(0.9)
 
-    def forward(self, input_tensor, hidden_tensor):
-        combined = torch.cat((input_tensor,hidden_tensor),1)
-        hidden = self.i2h(combined)
-        output = self.i2o(combined)
-        output = self.dropout(output)
-        return output, hidden
-
-    def init_hidden(self):
-        return torch.zeros(1,self.hidden_size)
+    def forward(self, x):
+        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).cuda()
+        out, _ = self.rnn(x,h0)
+        out = self.flat(out)
+        out = self.dropout(out)
+        out = self.fc(out)
+        return out
 
 
 class RecordsDataset(Dataset):
@@ -41,7 +47,8 @@ class RecordsDataset(Dataset):
             input_tensor = torch.zeros(len(tokens), 1, 200)
         else:
             tokens = self.dataset.get_sentences_tokens()[index]
-            input_tensor = torch.zeros(len(tokens), 1, 300)
+            #input_tensor = torch.zeros(len(tokens), 1, 300)
+            input_tensor = torch.zeros(42, 1, 300)
         position = list(self.dict.values()).index(label)
         for i, v in enumerate(tokens):
             try:
@@ -79,9 +86,9 @@ class TrainValidate:
 
     def init_dls(self):
         train_data_set = RecordsDataset(dataset=self.document.train, doc=self.document)
-        train_data_loader = DataLoader(train_data_set, batch_size=1, shuffle=True)
+        train_data_loader = DataLoader(train_data_set, batch_size=10, shuffle=True)
         val_data_set = RecordsDataset(dataset=self.document.validation, doc=self.document)
-        val_data_loader = DataLoader(val_data_set, batch_size=1, shuffle=False)
+        val_data_loader = DataLoader(val_data_set, batch_size=10, shuffle=False)
         return train_data_loader,val_data_loader
 
     def lr_schedule(self,epoch):
@@ -112,6 +119,8 @@ class TrainValidate:
             self.all_training_loss.append(trn_loss/len(train_dl))
             val_loss = self.validation(epoch_ndx, val_dl)
             self.all_val_loss.append(val_loss / len(val_dl))
+            print(f"trn: {trn_loss/len(train_dl):.3f}, val: {val_loss / len(val_dl):.3f}")
+            print(f"{(trn_loss/len(train_dl)) - (val_loss / len(val_dl)):.3f}")
         plt.figure()
         plt.plot(self.all_training_loss, 'r', label="Train")
         plt.plot(self.all_val_loss, 'b', label="Validation")
@@ -144,18 +153,17 @@ class TrainValidate:
                 loss, output = self.compute_loss(batch_ndx, batch_tup, val_dl.batch_size)
                 self.val_loss += loss
                 if (epoch_ndx + 1) % self.args.epoch_num == 0:
-                    self.y_pred.append(int(torch.max(output, 1)[1].detach()))
+                    for i in output:
+                        self.y_pred.append(int(i))
         return self.val_loss
 
     def compute_loss(self, batch_ndx, batch_tup, batch_size):
         loss_func = nn.CrossEntropyLoss(weight=self.class_weights)
         input, target = batch_tup
         target = torch.reshape(target, (-1,))
-        hidden = self.rnn_model.init_hidden()
-        for i in range(input.size(1)):
-            output, hidden = self.rnn_model(input[0][i], hidden)
+        output = self.rnn_model(input.squeeze(2))
         loss = loss_func(output, target)
-        return loss, output
+        return loss.mean(), torch.max(F.softmax(output.detach(),dim=1),1)[1]
 
     def clac_param(self):
         print(f"total parameters: {sum(p.numel() for p in self.rnn_model.parameters())}")

@@ -35,7 +35,7 @@ class InitModels:
 
         print('k-means initialized')
 
-    def train_rnn(self,continue_training=False, decay_learning=False,save_results=False,print_f1=False):
+    def train_rnn(self,continue_training=False, decay_learning=False,save_results=False,print_f1=False,check_test_set=False):
         eval_rnn = pd.DataFrame()
         eval_rnn['y_true'] = [
             list(self.document.labels_dict.keys())[list(self.document.labels_dict.values()).index(sentence.label)]
@@ -50,7 +50,8 @@ class InitModels:
             elif model == 'w2v_p':
                 args.word2vec_vec_size_for_rnn = 200
                 document.train.make_word2vec_for_rnn(args, None)
-            rnn = RNN(self.args.word2vec_vec_size_for_rnn, self.args.hidden_layer, len(self.document.labels_dict))
+            rnn = RNN(args.word2vec_vec_size_for_rnn, 42, args.hidden_layer, 2, len(document.labels_dict))
+            #rnn = RNN(self.args.word2vec_vec_size_for_rnn, self.args.hidden_layer, len(self.document.labels_dict))
             training = TrainValidate(self.args, self.document, rnn)
             eval_rnn[f'y_pred_{self.document.train.word2vec_model_name}_{self.args.lr}_{self.args.hidden_layer}'] = training.main(
                 continue_training, decay_learning)
@@ -60,6 +61,23 @@ class InitModels:
         if print_f1:
             for i in range(1, 4):
                 print(f"Model: {eval_rnn.columns[i]}. micro f1: {f1_score(eval_rnn.iloc[:, 0], eval_rnn.iloc[:, i], average='micro')}")
+        test_data_set = RecordsDataset(dataset=self.document.test, doc=self.document)
+        test_dl = DataLoader(test_data_set, batch_size=10, shuffle=False)
+        if check_test_set:
+            test_pred = []
+            for batch_ndx, batch_tup in enumerate(test_dl, 0):
+                with torch.no_grad():
+                    rnn.eval()
+                    input, _ = batch_tup
+                    output = rnn(input.squeeze(2))
+                    output = torch.max(F.softmax(output.detach(), dim=1), 1)[1]
+                    for i in output:
+                        test_pred.append(int(i))
+            test_true = [
+                list(self.document.labels_dict.keys())[list(self.document.labels_dict.values()).index(sentence.label)]
+                if sentence.label in self.document.labels_dict.values()
+                else len(self.document.labels_dict.keys()) for sentence in self.document.test.sentences]
+            print(f1_score(test_pred, test_true, average='micro'))
 
     def init_tfidf(self,t_sne_figure=True,return_centroids=False,save=False):
         random.shuffle(self.document.train.sentences)
@@ -114,10 +132,14 @@ class InitModels:
 
 #%% initializing NLP arguments and data
 if __name__ == '__main__':
-    args = NLP_args(k=30, min=0.0, random=0,min_cls=5,lr=0.001, hidden_layer=400,epoch_num=50)
+    args = NLP_args(k=30, min=0.0, random=0,min_cls=5,lr=0.001, hidden_layer=300,epoch_num=500, l2=0.09)
     data = make_data(threshold_for_dropping=args.min_cls)
     document=preprocess_data(data)
     models = InitModels(args,data,document)
+    document.train.make_word2vec_for_rnn(args, 5)
+    rnn = RNN(args.word2vec_vec_size_for_rnn, 42, args.hidden_layer, 2, len(document.labels_dict))
+    training = TrainValidate(args, document, rnn)
+    #training.main()
     word2vec_centroids = models.init_kmeans(model_name="self-trained word2vec with window 5",
                                             window=5, save=True, t_sne_figure=False,
                                             return_centroids=True)

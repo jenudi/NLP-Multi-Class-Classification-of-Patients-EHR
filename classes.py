@@ -14,7 +14,7 @@ class NLP_args:
 
     def __init__(self, k=30, min=0.0, random=0, min_cls=5,
                  word2vec_vec_size_for_kmeans=300,
-                 lr=0.0002, hidden_layer=200, epoch_num=15):
+                 lr=0.0002, hidden_layer=200, epoch_num=15,l2=0.01):
         self.k = k
         self.min = min
         self.random = random
@@ -25,7 +25,7 @@ class NLP_args:
         self.hidden_layer = hidden_layer
         self.word2vec_vec_size_for_rnn = 300
         self.epoch_num = epoch_num
-        self.l2 = 0.005
+        self.l2 = l2
 
 
 class Document:
