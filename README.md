@@ -4,6 +4,8 @@
 
 Yonatan Jenudi, MD [linkedin](linkedin.com/in/yjenudi), Elad Gashri [linkedin](linkedin.com/in/elad-gashri-400582176)
 
+By the guidance of our lecturer Dr. Liron Izhaki-Allerhand
+
 **Abstract**
 
 *The project compares NLP and ML models in regards to clustering and classification of electronic health records. The models included in the project are: Word2vec, TF-IDF, K-means, RNN, Random forest.*
@@ -215,16 +217,27 @@ To further control the complexity of our model and avoid overfitting, we use a o
 ![rnn2](images/rnn2.png)
 
 For each of our two word2vec representations we trained our RNN for 500 epochs with learning rate of 0.001 on the training set and fine-tuned hyper-parameters according the performance on the validation set.
+
 Summary of hyper-parameters:
+
 •	hidden vector size length: 300
+
 •	number of RNN layers: 2
+
 •	learning rate: 0.001
+
 •	one dropout layer with probability: 0.9
+
 •	L2 penalty: 0.01
+
 •	embedding vector length: 300
+
 •	embedding window: 3 or 5
+
 •	max sequence length: 42
+
 •	batch size: 10
+
 •	epochs: 500
 
 1. RNN with self-trained word2vec with window 3:
