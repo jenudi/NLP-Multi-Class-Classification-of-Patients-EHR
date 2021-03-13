@@ -152,7 +152,7 @@ In the middle-left of the figure, we notice some clusters with substantial clini
 
 In the middle-right, we also view the clusters&#39; apparent clinical association since myocardial infraction can be presented as moderate back pain and critical dyspnea.
 
-The last clusters to be noticed in this model are middle-down on the figure, where mild lightheadedness can also be a symptom of embolic stroke.
+The last clusters to be noticed in this model are middle-bottom on the figure, where mild lightheadedness can also be a symptom of embolic stroke.
 
 2. **K-means clustering of the word2vec window=5, vector size=300**
 
@@ -164,7 +164,7 @@ There is no clinical symptoms association between the clusters&#39; critical sho
 
 In the middle of the figure, we notice the clusters of hemorrhagic stroke and bilateral foot pain, which we find similar since strokes can also be represented as walking difficulties.
 
-Furthermore, in the middle-down, we again see the clusters that are matched together with some clinical sense, mild lightheadedness, and stroke.
+Furthermore, in the middle-bottom, we again see the clusters that are matched together with some clinical sense, mild lightheadedness, and stroke.
 
 3. **K-means clustering of the PubMed word2vec, vector size=200**
 
@@ -172,7 +172,7 @@ Furthermore, in the middle-down, we again see the clusters that are matched toge
 
 The third figure represents the PubMed model. In general, we observe a more spread-like shape of the clusters than the st-w2v5 model and many clusters CCs regarding the Nephro-Urology domain.
 
-We can see some clinical similarities of pyelonephritis and acute renal failure in the figures middle-left and middle-down. As we detected in the st-w2v5 model, the model cluster together severe bilateral foot pain and stroke. The clusters of hemorrhagic stroke and mild lightheadedness also centered together.
+We can see some clinical similarities of pyelonephritis and acute renal failure in the figures middle-left and middle-bottom. As we detected in the st-w2v5 model, the model cluster together severe bilateral foot pain and stroke. The clusters of hemorrhagic stroke and mild lightheadedness also centered together.
 
 4. **K-means clustering of the TF-IDF, vector size=300**
 
@@ -182,7 +182,7 @@ The last figure represents the TF-IDF model. The model looks purely clustered as
 
 The figure&#39;s middle-left clusters have mixed some CCs that have and do not have a clinical association.
 
-The model well clusters the amputations records in the middle-left and the diabetes symptoms CC in the right-down.
+The model well clusters the amputations records in the middle-left and the diabetes symptoms CC in the right-bottom.
 
 2. Conclusions of the k-means clustering
 
